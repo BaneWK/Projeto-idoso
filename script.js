@@ -24,28 +24,36 @@
     alertas: document.getElementById('alertas')
   };
 
+  // Função de alternância de telas corrigida e protegida contra elementos nulos
   const switchSection = (id) => {
-    Object.values(secoes).forEach(sec => { if(sec) sec.style.display = 'none'; });
-    idosoSection.style.display = 'none';
+    Object.values(secoes).forEach(sec => { 
+      if (sec) sec.style.display = 'none'; 
+    });
+    
+    if (idosoSection) idosoSection.style.display = 'none';
 
     if (!usuarioLogado) {
-      loginSection.style.display = 'block';
-      sidebar.classList.add('d-none');
-      mainHeader.classList.remove('d-flex');
-      mainHeader.classList.add('d-none');
+      if (loginSection) loginSection.style.display = 'block';
+      if (sidebar) sidebar.classList.add('d-none');
+      if (mainHeader) {
+        mainHeader.classList.remove('d-flex');
+        mainHeader.classList.add('d-none');
+      }
       return;
     }
 
-    loginSection.style.display = 'none';
-    mainHeader.classList.remove('d-none');
-    mainHeader.classList.add('d-flex');
+    if (loginSection) loginSection.style.display = 'none';
+    if (mainHeader) {
+      mainHeader.classList.remove('d-none');
+      mainHeader.classList.add('d-flex');
+    }
 
     if (usuarioPerfil === 'admin') {
-      sidebar.classList.remove('d-none');
+      if (sidebar) sidebar.classList.remove('d-none');
       if (secoes[id]) secoes[id].style.display = 'block';
     } else if (usuarioPerfil === 'idoso') {
-      sidebar.classList.add('d-none');
-      idosoSection.style.display = 'block';
+      if (sidebar) sidebar.classList.add('d-none');
+      if (idosoSection) idosoSection.style.display = 'block';
     }
   };
 
@@ -80,10 +88,10 @@
     }
   }
 
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail')?.value;
+    const password = document.getElementById('loginPassword')?.value;
     const errorDiv = document.getElementById('loginError');
 
     try {
@@ -102,8 +110,10 @@
 
       verificarAutenticacao();
     } catch (err) {
-      errorDiv.textContent = err.message;
-      errorDiv.classList.remove('d-none');
+      if (errorDiv) {
+        errorDiv.textContent = err.message;
+        errorDiv.classList.remove('d-none');
+      }
     }
   });
 
@@ -112,7 +122,7 @@
     usuarioPerfil = localStorage.getItem('laco_perfil');
 
     if (usuarioLogado) {
-      userStatus.textContent = `${usuarioLogado} (${usuarioPerfil})`;
+      if (userStatus) userStatus.textContent = `${usuarioLogado} (${usuarioPerfil})`;
       if (usuarioPerfil === 'admin') {
         switchSection('dashboard');
         sincronizarDadosServidor();
@@ -124,14 +134,14 @@
     }
   }
 
-  function executarLogout() {
+  function ejecutarLogout() {
     localStorage.clear();
     usuarioLogado = null;
     usuarioPerfil = null;
     verificarAutenticacao();
   }
 
-  btnLogout.addEventListener('click', ejecutarLogout);
+  btnLogout?.addEventListener('click', ejecutarLogout);
 
   window.enviarStatusIdoso = async function(statusSelecionado) {
     const msg = document.getElementById('idosoStatusMsg');
@@ -141,30 +151,36 @@
     
     try {
       botoesIdoso.forEach(btn => btn.disabled = true);
-      relatoInput.value = '';
+      if (relatoInput) relatoInput.value = '';
 
       await apiFetch('/checkins/rapido', {
         method: 'POST',
         body: JSON.stringify({ humorDia: statusSelecionado })
       });
 
-      msg.classList.remove('d-none');
-      campoOpcional.classList.remove('d-none');
+      if (msg) msg.classList.remove('d-none');
+      if (campoOpcional) campoOpcional.classList.remove('d-none');
 
-      document.getElementById('btnEnviarRelato').onclick = async () => {
-        const relatoTexto = relatoInput.value.trim();
-        if (relatoTexto) {
-          await apiFetch('/checkins/relato', {
-            method: 'POST',
-            body: JSON.stringify({ observacaoIdoso: relatoTexto })
-          });
-        }
-        fecharPainelAgradecimento();
-      };
+      const btnEnviar = document.getElementById('btnEnviarRelato');
+      if (btnEnviar) {
+        btnEnviar.onclick = async () => {
+          const relatoTexto = relatoInput ? relatoInput.value.trim() : "";
+          if (relatoTexto) {
+            await apiFetch('/checkins/relato', {
+              method: 'POST',
+              body: JSON.stringify({ observacaoIdoso: relatoTexto })
+            });
+          }
+          fecharPainelAgradecimento();
+        };
+      }
 
-      document.getElementById('btnFecharRelato').onclick = () => {
-        fecharPainelAgradecimento();
-      };
+      const btnFechar = document.getElementById('btnFecharRelato');
+      if (btnFechar) {
+        btnFechar.onclick = () => {
+          fecharPainelAgradecimento();
+        };
+      }
 
     } catch (err) {
       alert('Erro de conexão ao salvar status.');
@@ -172,12 +188,12 @@
     }
 
     function fecharPainelAgradecimento() {
-      msg.classList.add('d-none');
+      if (msg) msg.classList.add('d-none');
       botoesIdoso.forEach(btn => btn.disabled = false);
     }
   };
 
-  document.getElementById('formCadastroIdoso').addEventListener('submit', async (e) => {
+  document.getElementById('formCadastroIdoso')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const dados = {
       nome: document.getElementById('cadNome').value,
@@ -189,8 +205,11 @@
 
     try {
       await apiFetch('/idosos', { method: 'POST', body: JSON.stringify(dados) });
-      document.getElementById('cadIdosoMsg').classList.remove('d-none');
-      setTimeout(() => document.getElementById('cadIdosoMsg').classList.add('d-none'), 3000);
+      const msgSucesso = document.getElementById('cadIdosoMsg');
+      if (msgSucesso) {
+        msgSucesso.classList.remove('d-none');
+        setTimeout(() => msgSucesso.classList.add('d-none'), 3000);
+      }
       document.getElementById('formCadastroIdoso').reset();
       sincronizarDadosServidor();
     } catch (err) {
@@ -214,7 +233,7 @@
     }
   };
 
-  document.getElementById('formCheckin').addEventListener('submit', async (e) => {
+  document.getElementById('formCheckin')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const idosoId = document.getElementById('selectIdoso').value;
     if(!idosoId) return alert('Selecione um idoso.');
@@ -230,8 +249,11 @@
 
     try {
       await apiFetch('/checkins', { method: 'POST', body: JSON.stringify(dados) });
-      document.getElementById('checkinMsg').classList.remove('d-none');
-      setTimeout(() => document.getElementById('checkinMsg').classList.add('d-none'), 2500);
+      const msgCheckin = document.getElementById('checkinMsg');
+      if (msgCheckin) {
+        msgCheckin.classList.remove('d-none');
+        setTimeout(() => msgCheckin.classList.add('d-none'), 2500);
+      }
       document.getElementById('formCheckin').reset();
       sincronizarDadosServidor();
     } catch (err) {
@@ -266,6 +288,7 @@
     ];
 
     const grid = document.getElementById('dashboardCards');
+    if (!grid) return;
     grid.innerHTML = '';
     cards.forEach(c => {
       const col = document.createElement('div');
@@ -469,6 +492,7 @@
 
   document.getElementById('btnAtualizar')?.addEventListener('click', sincronizarDadosServidor);
 
+  // Sincronização em segundo plano automática a cada 10 segundos
   setInterval(() => {
     if(usuarioLogado && usuarioPerfil === 'admin') sincronizarDadosServidor();
   }, 10000);
