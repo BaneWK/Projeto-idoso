@@ -106,15 +106,20 @@ app.post('/api/checkins/rapido', autenticarToken, (req, res) => {
   res.json({ sucesso: true });
 });
 
-// ROTA ATUALIZADA: Injeção de Relato Opcional por Texto do Idoso
+// 8. Receber relato textual opcional do Idoso (CORRIGIDO)
 app.post('/api/checkins/relato', autenticarToken, (req, res) => {
   if (req.user.role !== 'idoso') return res.status(403).json({ mensagem: "Restrito" });
+  
+  // CORREÇÃO: Procura estritamente o primeiro item do array (que é o mais recente, devido ao unshift)
   const ultimoCheckin = checkins.find(c => c.idosoId === req.user.id);
+  
   if (ultimoCheckin) {
     ultimoCheckin.observacoes = req.body.observacaoIdoso;
+    // Salva também o momento exato em que o texto foi enviado
+    ultimoCheckin.dataAtualizacaoTexto = new Date().toISOString(); 
     return res.json({ sucesso: true });
   }
-  res.status(400).json({ mensagem: "Nenhum log para atualizar." });
+  
+  res.status(400).json({ mensagem: "Nenhum log recente encontrado para atualizar." });
 });
-
 app.listen(3000, () => console.log('Servidor Central Laço rodando na porta 3000'));

@@ -357,10 +357,12 @@ window.deletarIdoso = async function(id) {
     if(select) select.value = id;
   };
 
-  function carregarAlerts() {
+ function carregarAlerts() {
     const container = document.getElementById('alertasList');
     if(!container) return;
     container.innerHTML = '';
+    
+    // Filtra idosos que precisam de atenção (Amarelo ou Vermelho)
     let filtrados = idosos.filter(i => computeStatus(i.id) !== 'verde');
 
     if(filtrados.length === 0){
@@ -371,16 +373,38 @@ window.deletarIdoso = async function(id) {
     filtrados.forEach(i => {
       const status = computeStatus(i.id);
       
-      // Captura o último comentário textual se houver
-      const ultimoCheck = checkins.find(c => c.idosoId === i.id && c.observacoes);
-      const textoComplementar = ultimoCheck ? `<br><small class="text-dark"><b>Nota enviada:</b> "${ultimoCheck.observacoes}"</small>` : '';
+      // Encontra o check-in mais recente deste idoso específico
+      const ultimoCheck = checkins.find(c => c.idosoId === i.id);
+      
+      let horarioFormatado = "Horário não disponível";
+      let textoComplementar = "";
+
+      if (ultimoCheck) {
+        // Formata a data/hora para o padrão brasileiro (HH:MM:SS - DD/MM)
+        const dataObjeto = new Date(ultimoCheck.data);
+        horarioFormatado = dataObjeto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 
+                           ' em ' + dataObjeto.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        
+        // Se o idoso escreveu algo, exibe o bloco de mensagem de forma destacada
+        if (ultimoCheck.observacoes && ultimoCheck.observacoes.trim() !== "") {
+          textoComplementar = `
+            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-secondary">
+              <i class="bi bi-chat-left-quote text-muted me-1"></i> 
+              <span class="text-dark font-monospace small">"${ultimoCheck.observacoes}"</span>
+            </div>`;
+        }
+      }
 
       const card = document.createElement('div');
       card.className = 'col-12 col-md-6';
       card.innerHTML = `
-        <div class="card p-3 shadow-sm border-0 bg-white" style="border-right: 4px solid ${colorMap(status)} !important;">
-          <strong>${i.nome}</strong>
-          <span class="text-muted small">Atenção requerida com base nas últimas respostas.${textoComplementar}</span>
+        <div class="card p-3 shadow-sm border-0 bg-white" style="border-left: 4px solid ${colorMap(status)} !important;">
+          <div class="d-flex justify-content-between align-items-start">
+            <strong>${i.nome}</strong>
+            <span class="badge bg-light text-muted border small"><i class="bi bi-clock me-1"></i>${horarioFormatado}</span>
+          </div>
+          <span class="text-muted small d-block mt-1">Atenção requerida com base nas últimas respostas.</span>
+          ${textoComplementar}
         </div>`;
       container.appendChild(card);
     });
