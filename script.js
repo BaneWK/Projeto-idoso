@@ -1,13 +1,13 @@
 (function(){
-  // IMPORTANTE: Altere 'localhost' para o número IP do computador se for abrir no celular
+  // IMPORTANTE: Mude 'localhost' para o IP da sua máquina se for testar no Wi-Fi pelo celular
   const API_BASE = 'http://localhost:3000/api';
 
   let idosos = [];
   let checkins = [];
+  let agenda = [];
   let usuarioLogado = null;
   let usuarioPerfil = null;
 
-  // --- Elementos DOM ---
   const loginSection = document.getElementById('loginSection');
   const idosoSection = document.getElementById('idosoSection');
   const sidebar = document.getElementById('sidebar');
@@ -17,13 +17,13 @@
 
   const secoes = {
     dashboard: document.getElementById('dashboard'),
+    calendario: document.getElementById('calendario'),
     cadastroIdoso: document.getElementById('cadastroIdoso'),
     listaIdosos: document.getElementById('listaIdosos'),
     checkin: document.getElementById('checkin'),
     alertas: document.getElementById('alertas')
   };
 
-  // --- Navegação e Fluxo de Telas ---
   const switchSection = (id) => {
     Object.values(secoes).forEach(sec => { if(sec) sec.style.display = 'none'; });
     idosoSection.style.display = 'none';
@@ -49,7 +49,6 @@
     }
   };
 
-  // --- Central de Requisições HTTP (API) ---
   async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('laco_token');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -68,17 +67,19 @@
     try {
       idosos = await apiFetch('/idosos');
       checkins = await apiFetch('/checkins');
+      agenda = await apiFetch('/agenda');
       
       carregarDashboard();
       carregarIdosos();
       carregarIdosoParaCheckin();
+      carregarIdososParaAgenda();
+      carregarTabelaAgenda();
       carregarAlerts();
     } catch (err) {
       console.error('Erro na sincronização:', err);
     }
   }
 
-  // --- Sistema de Autenticação ---
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
@@ -123,7 +124,7 @@
     }
   }
 
-  function ejecutarLogout() {
+  function executarLogout() {
     localStorage.clear();
     usuarioLogado = null;
     usuarioPerfil = null;
@@ -132,7 +133,6 @@
 
   btnLogout.addEventListener('click', ejecutarLogout);
 
-  // --- Painel do Idoso (Com trava Antispam e Relato Opcional) ---
   window.enviarStatusIdoso = async function(statusSelecionado) {
     const msg = document.getElementById('idosoStatusMsg');
     const botoesIdoso = document.querySelectorAll('.btn-idoso');
@@ -140,17 +140,14 @@
     const campoOpcional = document.getElementById('campoSentimentoOpcional');
     
     try {
-      // Bloqueia cliques duplicados instantaneamente
       botoesIdoso.forEach(btn => btn.disabled = true);
       relatoInput.value = '';
 
-      // Posta humor inicial no servidor central
       await apiFetch('/checkins/rapido', {
         method: 'POST',
         body: JSON.stringify({ humorDia: statusSelecionado })
       });
 
-      // Abre as janelas interativas de agradecimento e campo opcional
       msg.classList.remove('d-none');
       campoOpcional.classList.remove('d-none');
 
@@ -176,11 +173,10 @@
 
     function fecharPainelAgradecimento() {
       msg.classList.add('d-none');
-      botoesIdoso.forEach(btn => btn.disabled = false); // Libera os botões de humor de novo
+      botoesIdoso.forEach(btn => btn.disabled = false);
     }
   };
 
-  // --- Métodos de Criação e Remoção Administrativa ---
   document.getElementById('formCadastroIdoso').addEventListener('submit', async (e) => {
     e.preventDefault();
     const dados = {
@@ -202,24 +198,18 @@
     }
   });
 
-window.deletarIdoso = async function(id) {
-    if (confirm("Tem certeza que deseja remover permanentemente este idoso do sistema? Esta ação não pode ser desfeita.")) {
+  window.deletarIdoso = async function(id) {
+    if (confirm("Tem certeza que deseja remover permanentemente este idoso?")) {
       try {
-        // Correção: Garante o método DELETE através da estrutura do apiFetch
-        const resposta = await apiFetch(`/idosos/${id}`, {
-          method: 'DELETE'
-        });
-
-        // Verifica se o servidor retornou sucesso
+        const resposta = await apiFetch(`/idosos/${id}`, { method: 'DELETE' });
         if (resposta && (resposta.sucesso || !resposta.mensagem)) {
           alert("Idoso removido com sucesso!");
-          sincronizarDadosServidor(); // Atualiza a tela imediatamente
+          sincronizarDadosServidor();
         } else {
-          alert(`Não foi possível remover: ${resposta.mensagem || 'Erro desconhecido'}`);
+          alert(`Não foi possível remover: ${resposta.mensagem}`);
         }
       } catch (err) {
-        console.error("Erro na exclusão:", err);
-        alert("Erro ao tentar remover o idoso. Verifique a conexão com o servidor.");
+        alert("Erro ao remover registro.");
       }
     }
   };
@@ -249,7 +239,6 @@ window.deletarIdoso = async function(id) {
     }
   });
 
-  // --- Analisador de Índices Visuais ---
   function computeStatus(idosoId) {
     const idChecks = checkins.filter(c => c.idosoId === idosoId).slice(0, 7);
     if (idChecks.length === 0) return 'verde';
@@ -357,12 +346,10 @@ window.deletarIdoso = async function(id) {
     if(select) select.value = id;
   };
 
- function carregarAlerts() {
+  function carregarAlerts() {
     const container = document.getElementById('alertasList');
     if(!container) return;
     container.innerHTML = '';
-    
-    // Filtra idosos que precisam de atenção (Amarelo ou Vermelho)
     let filtrados = idosos.filter(i => computeStatus(i.id) !== 'verde');
 
     if(filtrados.length === 0){
@@ -372,23 +359,19 @@ window.deletarIdoso = async function(id) {
 
     filtrados.forEach(i => {
       const status = computeStatus(i.id);
-      
-      // Encontra o check-in mais recente deste idoso específico
       const ultimoCheck = checkins.find(c => c.idosoId === i.id);
       
-      let horarioFormatado = "Horário não disponível";
+      let horarioFormatado = "Horário indisponível";
       let textoComplementar = "";
 
       if (ultimoCheck) {
-        // Formata a data/hora para o padrão brasileiro (HH:MM:SS - DD/MM)
         const dataObjeto = new Date(ultimoCheck.data);
         horarioFormatado = dataObjeto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 
                            ' em ' + dataObjeto.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         
-        // Se o idoso escreveu algo, exibe o bloco de mensagem de forma destacada
         if (ultimoCheck.observacoes && ultimoCheck.observacoes.trim() !== "") {
           textoComplementar = `
-            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-secondary">
+            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-secondary text-start">
               <i class="bi bi-chat-left-quote text-muted me-1"></i> 
               <span class="text-dark font-monospace small">"${ultimoCheck.observacoes}"</span>
             </div>`;
@@ -403,12 +386,82 @@ window.deletarIdoso = async function(id) {
             <strong>${i.nome}</strong>
             <span class="badge bg-light text-muted border small"><i class="bi bi-clock me-1"></i>${horarioFormatado}</span>
           </div>
-          <span class="text-muted small d-block mt-1">Atenção requerida com base nas últimas respostas.</span>
+          <span class="text-muted small d-block mt-1 text-start">Atenção requerida com base nas respostas.</span>
           ${textoComplementar}
         </div>`;
       container.appendChild(card);
     });
   }
+
+  function carregarIdososParaAgenda() {
+    const select = document.getElementById('agendaIdoso');
+    if(!select) return;
+    select.innerHTML = '<option value="">-- Selecione o Residente --</option>';
+    idosos.forEach(i => {
+      const opt = document.createElement('option');
+      opt.value = i.id;
+      opt.textContent = i.nome;
+      select.appendChild(opt);
+    });
+  }
+
+  function carregarTabelaAgenda() {
+    const corpoTabela = document.getElementById('tabelaAgendaCorpo');
+    if (!corpoTabela) return;
+    corpoTabela.innerHTML = '';
+
+    if (agenda.length === 0) {
+      corpoTabela.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum compromisso agendado.</td></tr>';
+      return;
+    }
+
+    const agendaOrdenada = [...agenda].sort((a, b) => `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`));
+
+    agendaOrdenada.forEach(ev => {
+      const idoso = idosos.find(i => i.id === ev.idosoId);
+      const nomeIdoso = idoso ? idoso.nome : "Não encontrado";
+      const [ano, mes, dia] = ev.data.split('-');
+
+      const linha = document.createElement('tr');
+      if (ev.concluido) linha.className = 'table-light text-decoration-line-through text-muted';
+
+      linha.innerHTML = `
+        <td><input type="checkbox" class="form-check-input ms-2" ${ev.concluido ? 'checked' : ''} onclick="alternarStatusAgenda('${ev.id}')"></td>
+        <td class="fw-bold">${nomeIdoso}</td>
+        <td><span class="badge bg-secondary me-1">${ev.tipo}</span> ${ev.descricao}</td>
+        <td><i class="bi bi-clock me-1"></i>${ev.hora} - ${dia}/${mes}</td>
+      `;
+      corpoTabela.appendChild(linha);
+    });
+  }
+
+  document.getElementById('formAgenda')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dados = {
+      idosoId: document.getElementById('agendaIdoso').value,
+      tipo: document.getElementById('agendaTipo').value,
+      descricao: document.getElementById('agendaDescricao').value,
+      data: document.getElementById('agendaData').value,
+      hora: document.getElementById('agendaHora').value
+    };
+
+    try {
+      await apiFetch('/agenda', { method: 'POST', body: JSON.stringify(dados) });
+      document.getElementById('formAgenda').reset();
+      sincronizarDadosServidor();
+    } catch (err) {
+      alert('Erro ao salvar agendamento.');
+    }
+  });
+
+  window.alternarStatusAgenda = async function(id) {
+    try {
+      await apiFetch(`/agenda/${id}/status`, { method: 'PATCH' });
+      sincronizarDadosServidor();
+    } catch (err) {
+      alert('Erro ao atualizar status do compromisso.');
+    }
+  };
 
   document.querySelectorAll('#sidebar button[data-section]').forEach(btn => {
     btn.addEventListener('click', () => switchSection(btn.getAttribute('data-section')));
@@ -416,7 +469,6 @@ window.deletarIdoso = async function(id) {
 
   document.getElementById('btnAtualizar')?.addEventListener('click', sincronizarDadosServidor);
 
-  // Varredura automática em background a cada 10 segundos
   setInterval(() => {
     if(usuarioLogado && usuarioPerfil === 'admin') sincronizarDadosServidor();
   }, 10000);

@@ -19,6 +19,7 @@
       </div>
       <nav class="nav flex-column px-3">
         <button class="nav-link text-start" data-section="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</button>
+        <button class="nav-link text-start" data-section="calendario"><i class="bi bi-calendar3 me-2"></i>Calendário de Cuidados</button>
         <button class="nav-link text-start" data-section="cadastroIdoso"><i class="bi bi-person-plus me-2"></i>Cadastrar Idoso</button>
         <button class="nav-link text-start" data-section="listaIdosos"><i class="bi bi-person-workspace me-2"></i>Lista de Idosos</button>
         <button class="nav-link text-start" data-section="checkin"><i class="bi bi-clipboard-check me-2"></i>Check-in Diário</button>
@@ -103,11 +104,70 @@
         </div>
       </section>
 
+      <section id="calendario" class="container py-4 section" style="display:none;">
+        <h2 class="mb-3">Calendário e Agenda de Cuidados</h2>
+        <p class="text-muted small">Gerencie cronogramas de medicamentos, consultas e rotinas dos residentes.</p>
+        
+        <div class="row g-4">
+          <div class="col-md-5">
+            <form id="formAgenda" class="card p-3 shadow-sm">
+              <h5 class="card-title mb-3 text-primary">Novo Agendamento</h5>
+              <div class="mb-2">
+                <label for="agendaIdoso" class="form-label">Residente</label>
+                <select id="agendaIdoso" class="form-select" required></select>
+              </div>
+              <div class="mb-2">
+                <label for="agendaTipo" class="form-label">Tipo de Evento</label>
+                <select id="agendaTipo" class="form-select" required>
+                  <option value="Medicamento">Medicamento</option>
+                  <option value="Consulta">Consulta Médica</option>
+                  <option value="Atividade">Atividade / Fisioterapia</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label for="agendaDescricao" class="form-label">Descrição</label>
+                <input id="agendaDescricao" type="text" class="form-control" placeholder="Ex: Paracetamol 500mg" required>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label for="agendaData" class="form-label">Data</label>
+                  <input id="agendaData" type="date" class="form-control" required>
+                </div>
+                <div class="col-6">
+                  <label for="agendaHora" class="form-label">Horário</label>
+                  <input id="agendaHora" type="time" class="form-control" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Adicionar à Agenda</button>
+            </form>
+          </div>
+          
+          <div class="col-md-7">
+            <div class="card p-3 shadow-sm h-100">
+              <h5 class="card-title mb-3">Compromissos Agendados</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Status</th>
+                      <th>Residente</th>
+                      <th>Compromisso</th>
+                      <th>Data/Hora</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tabelaAgendaCorpo"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="dashboard" class="container py-4 section" style="display:none;">
         <div class="row mb-3 align-items-end">
           <div class="col-md-8">
             <h2>Dashboard Administrativa</h2>
-            <p class="text-muted small mb-0">Status consolidado da instituição em tempo real.</p>
+            <p class="text-muted small mb-0">Status consolidado em tempo real.</p>
           </div>
           <div class="col-md-4 text-md-end">
             <button id="btnAtualizar" class="btn btn-outline-success btn-sm">Sincronizar Agora</button>
@@ -143,7 +203,7 @@
               </div>
               <div class="mb-3">
                 <label for="cadEmail" class="form-label">E-mail de Login do Idoso</label>
-                <input id="cadEmail" type="email" class="form-control" placeholder="Para ele usar no tablet/celular" required>
+                <input id="cadEmail" type="email" class="form-control" placeholder="Para uso em tablets" required>
               </div>
               <div class="mb-3">
                 <label for="cadSenha" class="form-label">Senha de Acesso</label>

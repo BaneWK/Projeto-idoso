@@ -18,7 +18,6 @@ main { margin-left: 260px; }
 .section { display: none; }
 .card { border-radius: 12px; }
 
-/* Estilização dos Botões dos Idosos */
 .btn-idoso {
   width: 90%;
   max-width: 500px;
@@ -29,17 +28,9 @@ main { margin-left: 260px; }
   margin-bottom: 15px;
   transition: transform 0.1s ease;
 }
-.btn-idoso:active {
-  transform: scale(0.95);
-}
+.btn-idoso:active { transform: scale(0.95); }
+.btn-idoso:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
 
-.btn-idoso:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* Otimizações Responsivas para Dispositivos Móveis Pequenos */
 @media (max-width: 576px) {
   .btn-idoso {
     width: 100% !important;
@@ -47,12 +38,6 @@ main { margin-left: 260px; }
     font-size: 1.6rem !important;
     border-radius: 15px !important;
   }
-  #campoSentimentoOpcional {
-    width: 100% !important;
-    padding: 15px !important;
-  }
-  .container {
-    padding-left: 15px;
-    padding-right: 15px;
-  }
+  #campoSentimentoOpcional { width: 100% !important; padding: 15px !important; }
+  .container { padding-left: 15px; padding-right: 15px; }
 }
