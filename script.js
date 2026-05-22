@@ -1,5 +1,4 @@
 (function(){
-  // IMPORTANTE: Mude 'localhost' para o IP da sua máquina se for testar no Wi-Fi pelo celular
   const API_BASE = 'http://localhost:3000/api';
 
   let idosos = [];
@@ -9,11 +8,15 @@
   let usuarioPerfil = null;
 
   const loginSection = document.getElementById('loginSection');
+  const appContainer = document.getElementById('appContainer');
   const idosoSection = document.getElementById('idosoSection');
   const sidebar = document.getElementById('sidebar');
-  const mainHeader = document.getElementById('mainHeader');
   const userStatus = document.getElementById('userStatus');
   const btnLogout = document.getElementById('btnLogout');
+  const btnAtualizar = document.getElementById('btnAtualizar');
+  const idosoMainInterface = document.getElementById('idosoMainInterface');
+  const idosoCooldownScreen = document.getElementById('idosoCooldownScreen');
+  const badgeAlertCount = document.getElementById('badgeAlertCount');
 
   const secoes = {
     dashboard: document.getElementById('dashboard'),
@@ -24,58 +27,83 @@
     alertas: document.getElementById('alertas')
   };
 
-  // Função de alternância de telas corrigida e protegida contra elementos nulos
-  const switchSection = (id) => {
-    Object.values(secoes).forEach(sec => { 
-      if (sec) sec.style.display = 'none'; 
-    });
-    
+  function sanitize(string) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+    return String(string).replace(/[&<>"'/]/g, m => map[m]);
+  }
+
+  const switchSection = (sectionId) => {
+    Object.values(secoes).forEach(sec => { if (sec) sec.style.display = 'none'; });
     if (idosoSection) idosoSection.style.display = 'none';
 
     if (!usuarioLogado) {
-      if (loginSection) loginSection.style.display = 'block';
-      if (sidebar) sidebar.classList.add('d-none');
-      if (mainHeader) {
-        mainHeader.classList.remove('d-flex');
-        mainHeader.classList.add('d-none');
-      }
+      loginSection?.classList.remove('d-none');
+      appContainer?.classList.add('d-none');
       return;
     }
 
-    if (loginSection) loginSection.style.display = 'none';
-    if (mainHeader) {
-      mainHeader.classList.remove('d-none');
-      mainHeader.classList.add('d-flex');
-    }
+    loginSection?.classList.add('d-none');
+    appContainer?.classList.remove('d-none');
 
     if (usuarioPerfil === 'admin') {
-      if (sidebar) sidebar.classList.remove('d-none');
-      if (secoes[id]) secoes[id].style.display = 'block';
+      sidebar?.classList.remove('d-none');
+      if (secoes[sectionId]) secoes[sectionId].style.display = 'block';
+      
+      document.querySelectorAll('#sidebar .sidebar-item').forEach(btn => {
+        if(btn.getAttribute('data-section') === sectionId) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
     } else if (usuarioPerfil === 'idoso') {
-      if (sidebar) sidebar.classList.add('d-none');
+      sidebar?.classList.add('d-none');
       if (idosoSection) idosoSection.style.display = 'block';
+      idosoMainInterface?.classList.remove('d-none');
+      idosoCooldownScreen?.classList.add('d-none');
     }
   };
+
+  function ejecutarLogout() {
+    localStorage.clear();
+    usuarioLogado = null;
+    usuarioPerfil = null;
+    verificarAutenticacao();
+  }
+
+  btnLogout?.addEventListener('click', ejecutarLogout);
 
   async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('laco_token');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     
-    const resposta = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-    if (resposta.status === 401 || resposta.status === 403) {
-      executarLogout();
-      throw new Error('Sessão expirada');
+    try {
+      const resposta = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+      
+      if (resposta.status === 401 || resposta.status === 403) {
+        ejecutarLogout();
+        throw new Error('Sessão expirada.');
+      }
+      
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.mensagem || 'Erro na comunicação.');
+      return dados;
+    } catch (err) {
+      console.error(`Erro em [${endpoint}]:`, err.message);
+      throw err;
     }
-    return resposta.json();
   }
 
   async function sincronizarDadosServidor() {
     if (!usuarioLogado || usuarioPerfil !== 'admin') return;
     try {
-      idosos = await apiFetch('/idosos');
-      checkins = await apiFetch('/checkins');
-      agenda = await apiFetch('/agenda');
+      const [dadosIdosos, dadosCheckins, dadosAgenda] = await Promise.all([
+        apiFetch('/idosos'),
+        apiFetch('/checkins'),
+        apiFetch('/agenda')
+      ]);
+
+      idosos = dadosIdosos;
+      checkins = dadosCheckins;
+      agenda = dadosAgenda;
       
       carregarDashboard();
       carregarIdosos();
@@ -84,7 +112,7 @@
       carregarTabelaAgenda();
       carregarAlerts();
     } catch (err) {
-      console.error('Erro na sincronização:', err);
+      console.error('Falha na sincronização:', err);
     }
   }
 
@@ -95,19 +123,16 @@
     const errorDiv = document.getElementById('loginError');
 
     try {
-      const resposta = await fetch(`${API_BASE}/auth/login`, {
+      const dados = await apiFetch('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-
-      const dados = await resposta.json();
-      if (!resposta.ok) throw new Error(dados.mensagem || 'Falha no Login');
 
       localStorage.setItem('laco_token', dados.token);
       localStorage.setItem('laco_usuario', dados.user.email);
       localStorage.setItem('laco_perfil', dados.user.role);
 
+      errorDiv?.classList.add('d-none');
       verificarAutenticacao();
     } catch (err) {
       if (errorDiv) {
@@ -122,7 +147,7 @@
     usuarioPerfil = localStorage.getItem('laco_perfil');
 
     if (usuarioLogado) {
-      if (userStatus) userStatus.textContent = `${usuarioLogado} (${usuarioPerfil})`;
+      if (userStatus) userStatus.textContent = `${usuarioLogado} (${usuarioPerfil.toUpperCase()})`;
       if (usuarioPerfil === 'admin') {
         switchSection('dashboard');
         sincronizarDadosServidor();
@@ -133,15 +158,6 @@
       switchSection(null);
     }
   }
-
-  function ejecutarLogout() {
-    localStorage.clear();
-    usuarioLogado = null;
-    usuarioPerfil = null;
-    verificarAutenticacao();
-  }
-
-  btnLogout?.addEventListener('click', ejecutarLogout);
 
   window.enviarStatusIdoso = async function(statusSelecionado) {
     const msg = document.getElementById('idosoStatusMsg');
@@ -158,37 +174,41 @@
         body: JSON.stringify({ humorDia: statusSelecionado })
       });
 
-      if (msg) msg.classList.remove('d-none');
-      if (campoOpcional) campoOpcional.classList.remove('d-none');
+      msg?.classList.remove('d-none');
+      campoOpcional?.classList.remove('d-none');
 
       const btnEnviar = document.getElementById('btnEnviarRelato');
       if (btnEnviar) {
         btnEnviar.onclick = async () => {
           const relatoTexto = relatoInput ? relatoInput.value.trim() : "";
           if (relatoTexto) {
-            await apiFetch('/checkins/relato', {
-              method: 'POST',
-              body: JSON.stringify({ observacaoIdoso: relatoTexto })
-            });
+            try {
+              await apiFetch('/checkins/relato', {
+                method: 'POST',
+                body: JSON.stringify({ observacaoIdoso: relatoTexto })
+              });
+            } catch (e) {
+              console.error(e);
+            }
           }
-          fecharPainelAgradecimento();
+          finalizarFluxoIdoso();
         };
       }
 
       const btnFechar = document.getElementById('btnFecharRelato');
       if (btnFechar) {
-        btnFechar.onclick = () => {
-          fecharPainelAgradecimento();
-        };
+        btnFechar.onclick = () => finalizarFluxoIdoso();
       }
 
     } catch (err) {
-      alert('Erro de conexão ao salvar status.');
+      alert('Erro de rede ao processar.');
       botoesIdoso.forEach(btn => btn.disabled = false);
     }
 
-    function fecharPainelAgradecimento() {
-      if (msg) msg.classList.add('d-none');
+    function finalizarFluxoIdoso() {
+      idosoMainInterface?.classList.add('d-none');
+      idosoCooldownScreen?.classList.remove('d-none');
+      msg?.classList.add('d-none');
       botoesIdoso.forEach(btn => btn.disabled = false);
     }
   };
@@ -205,30 +225,21 @@
 
     try {
       await apiFetch('/idosos', { method: 'POST', body: JSON.stringify(dados) });
-      const msgSucesso = document.getElementById('cadIdosoMsg');
-      if (msgSucesso) {
-        msgSucesso.classList.remove('d-none');
-        setTimeout(() => msgSucesso.classList.add('d-none'), 3000);
-      }
       document.getElementById('formCadastroIdoso').reset();
       sincronizarDadosServidor();
+      alert('Residente registrado.');
     } catch (err) {
-      alert('Falha ao registrar.');
+      alert(err.message);
     }
   });
 
   window.deletarIdoso = async function(id) {
-    if (confirm("Tem certeza que deseja remover permanentemente este idoso?")) {
+    if (confirm("Remover permanentemente este residente?")) {
       try {
-        const resposta = await apiFetch(`/idosos/${id}`, { method: 'DELETE' });
-        if (resposta && (resposta.sucesso || !resposta.mensagem)) {
-          alert("Idoso removido com sucesso!");
-          sincronizarDadosServidor();
-        } else {
-          alert(`Não foi possível remover: ${resposta.mensagem}`);
-        }
+        await apiFetch(`/idosos/${id}`, { method: 'DELETE' });
+        sincronizarDadosServidor();
       } catch (err) {
-        alert("Erro ao remover registro.");
+        alert(err.message);
       }
     }
   };
@@ -236,8 +247,6 @@
   document.getElementById('formCheckin')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const idosoId = document.getElementById('selectIdoso').value;
-    if(!idosoId) return alert('Selecione um idoso.');
-
     const dados = {
       idosoId,
       humorDia: document.getElementById('checkinHumor').value,
@@ -249,103 +258,60 @@
 
     try {
       await apiFetch('/checkins', { method: 'POST', body: JSON.stringify(dados) });
-      const msgCheckin = document.getElementById('checkinMsg');
-      if (msgCheckin) {
-        msgCheckin.classList.remove('d-none');
-        setTimeout(() => msgCheckin.classList.add('d-none'), 2500);
-      }
       document.getElementById('formCheckin').reset();
       sincronizarDadosServidor();
+      alert('Prontuário salvo.');
     } catch (err) {
-      alert('Erro ao gravar log.');
+      alert('Erro operacional.');
     }
   });
 
   function computeStatus(idosoId) {
-    const idChecks = checkins.filter(c => c.idosoId === idosoId).slice(0, 7);
+    const idChecks = checkins.filter(c => String(c.idosoId) === String(idosoId)).slice(0, 5);
     if (idChecks.length === 0) return 'verde';
     let soma = 0;
     idChecks.forEach(c => {
       soma += (c.humorDia === 'Bem' ? 3 : c.humorDia === 'Atenção' ? 2 : 1);
     });
-    const media = soma / idChecks.length;
-    return media >= 2.5 ? 'verde' : media >= 1.8 ? 'amarelo' : 'vermelho';
+    return (soma / idChecks.length) >= 2.4 ? 'verde' : (soma / idChecks.length) >= 1.7 ? 'amarelo' : 'vermelho';
   }
 
   function colorMap(status) {
-    return status === 'verde' ? '#28a745' : status === 'amarelo' ? '#f2c94c' : '#e74c3c';
+    return status === 'verde' ? '#27ae60' : status === 'amarelo' ? '#f39c12' : '#c0392b';
   }
 
   function carregarDashboard() {
-    const totalIdosos = idosos.length;
-    let alertasCount = idosos.filter(i => computeStatus(i.id) !== 'verde').length;
-    const checkinsSemana = checkins.length;
-
-    const cards = [
-      { label: 'Idosos Cadastrados', value: totalIdosos, color: 'primary' },
-      { label: 'Alertas Ativos', value: alertasCount, color: 'warning' },
-      { label: 'Total de Logs Históricos', value: checkinsSemana, color: 'success' }
-    ];
-
     const grid = document.getElementById('dashboardCards');
     if (!grid) return;
-    grid.innerHTML = '';
-    cards.forEach(c => {
-      const col = document.createElement('div');
-      col.className = 'col-12 col-md-4';
-      col.innerHTML = `
-        <div class="card p-3 shadow-sm bg-white border-0">
-          <div class="d-flex align-items-center justify-content-between">
-            <div>
-              <div class="text-muted small">${c.label}</div>
-              <div class="fs-4 fw-bold">${c.value}</div>
-            </div>
-            <div class="rounded-circle bg-${c.color} text-white d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-              <i class="bi bi-heart-fill"></i>
-            </div>
-          </div>
-        </div>`;
-      grid.appendChild(col);
-    });
+    grid.innerHTML = `
+      <div class="col-6 col-md-4"><div class="card p-3 shadow-custom border-0 bg-white">⏱️ Residentes: <b>${idosos.length}</b></div></div>
+      <div class="col-6 col-md-4"><div class="card p-3 shadow-custom border-0 bg-white">⚠️ Alertas: <b>${idosos.filter(i=>computeStatus(i.id)!=='verde').length}</b></div></div>
+      <div class="col-12 col-md-4"><div class="card p-3 shadow-custom border-0 bg-white">📋 Prontuários: <b>${checkins.length}</b></div></div>
+    `;
   }
 
   function carregarIdosos() {
     const containers = [document.getElementById('idososGrid'), document.getElementById('geralIdosos')];
     containers.forEach(c => { if(c) c.innerHTML = ''; });
 
-    [...idosos].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(idObj => {
+    idosos.forEach(idObj => {
       const status = computeStatus(idObj.id);
-      const corBorda = colorMap(status);
+      const cor = colorMap(status);
+      const ultimoCheck = checkins.find(c => String(c.idosoId) === String(idObj.id));
+      const txtRelato = (ultimoCheck && ultimoCheck.observacoes) ? `<br><small class="text-secondary">💬 "${sanitize(ultimoCheck.observacoes)}"</small>` : "";
 
-      const cardHTML = `
-        <div class="card p-2 h-100 shadow-sm border-0" style="border-left: 5px solid ${corBorda} !important;">
-          <div class="row g-0 align-items-center">
-            <div class="col-8 ps-2">
-              <strong class="d-block text-truncate">${idObj.nome}</strong>
-              <span class="text-muted small">Idade: ${idObj.idade} • Quarto: ${idObj.quarto || 'N/A'}</span>
-              <div class="mt-2 d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openCheckin('${idObj.id}')">
-                  <i class="bi bi-clipboard-check"></i> Evoluir
-                </button>
-                <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deletarIdoso('${idObj.id}')" title="Excluir Idoso">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            </div>
-            <div class="col-4 text-end pe-2">
-              <span class="badge bg-${status === 'verde' ? 'success' : status === 'amarelo' ? 'warning' : 'danger'} text-dark">
-                ${status.toUpperCase()}
-              </span>
-            </div>
-          </div>
+      const html = `
+        <div class="card p-3 shadow-custom border-0 bg-white" style="border-left: 5px solid ${cor} !important;">
+          <strong class="text-primary fs-5">${sanitize(idObj.nome)}</strong>
+          <span class="text-muted small">Quarto: ${sanitize(idObj.quarto)}</span>
+          ${txtRelato}
+          <div class="mt-2"><button class="btn btn-sm btn-outline-primary" onclick="openCheckin('${idObj.id}')">Evoluir</button>
+          <button class="btn btn-sm btn-link text-danger" onclick="deletarIdoso('${idObj.id}')">Excluir</button></div>
         </div>`;
-
-      containers.forEach(container => {
-        if (container) {
-          const col = document.createElement('div');
-          col.className = 'col-12 col-md-6 col-lg-4';
-          col.innerHTML = cardHTML;
-          container.appendChild(col);
+      
+      containers.forEach(c => {
+        if(c) {
+          const div = document.createElement('div'); div.className = 'col-12 col-md-6 col-lg-4'; div.innerHTML = html; c.appendChild(div);
         }
       });
     });
@@ -354,107 +320,76 @@
   function carregarIdosoParaCheckin() {
     const select = document.getElementById('selectIdoso');
     if(!select) return;
+    
+    const valorAtual = select.value;
+    
     select.innerHTML = '<option value="">-- Selecione --</option>';
-    idosos.forEach(i => {
-      const opt = document.createElement('option');
-      opt.value = i.id;
-      opt.textContent = i.nome;
-      select.appendChild(opt);
-    });
+    idosos.forEach(i => { select.innerHTML += `<option value="${i.id}">${sanitize(i.nome)}</option>`; });
+    
+    if (valorAtual) {
+      select.value = valorAtual;
+    }
   }
 
-  window.openCheckin = function(id) {
-    switchSection('checkin');
-    const select = document.getElementById('selectIdoso');
-    if(select) select.value = id;
-  };
+  window.openCheckin = function(id) { switchSection('checkin'); const s = document.getElementById('selectIdoso'); if(s) s.value = id; };
 
   function carregarAlerts() {
     const container = document.getElementById('alertasList');
     if(!container) return;
     container.innerHTML = '';
-    let filtrados = idosos.filter(i => computeStatus(i.id) !== 'verde');
 
-    if(filtrados.length === 0){
-      container.innerHTML = `<div class="col-12"><div class="alert alert-info">Sem alertas críticos no momento.</div></div>`;
+    let filtrados = idosos.filter(i => {
+      const statusNaoVerde = computeStatus(i.id) !== 'verde';
+      const u = checkins.find(c => String(c.idosoId) === String(i.id));
+      return statusNaoVerde || (u && u.observacoes && u.observacoes.trim() !== "");
+    });
+
+    if(badgeAlertCount) {
+      badgeAlertCount.textContent = filtrados.length;
+      badgeAlertCount.className = filtrados.length > 0 ? "badge bg-danger ms-auto" : "d-none";
+    }
+
+    if(filtrados.length === 0) {
+      container.innerHTML = '<p class="text-muted p-2">Nenhum alerta ativo no momento.</p>';
       return;
     }
 
     filtrados.forEach(i => {
       const status = computeStatus(i.id);
-      const ultimoCheck = checkins.find(c => c.idosoId === i.id);
-      
-      let horarioFormatado = "Horário indisponível";
-      let textoComplementar = "";
+      const u = checkins.find(c => String(c.idosoId) === String(i.id));
+      const msgTexto = (u && u.observacoes) ? `<div class="p-2 bg-light rounded text-danger mt-2"><b>Recado do Idoso:</b> "${sanitize(u.observacoes)}"</div>` : "";
 
-      if (ultimoCheck) {
-        const dataObjeto = new Date(ultimoCheck.data);
-        horarioFormatado = dataObjeto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 
-                           ' em ' + dataObjeto.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        
-        if (ultimoCheck.observacoes && ultimoCheck.observacoes.trim() !== "") {
-          textoComplementar = `
-            <div class="mt-2 p-2 bg-light rounded border-start border-3 border-secondary text-start">
-              <i class="bi bi-chat-left-quote text-muted me-1"></i> 
-              <span class="text-dark font-monospace small">"${ultimoCheck.observacoes}"</span>
-            </div>`;
-        }
-      }
-
-      const card = document.createElement('div');
-      card.className = 'col-12 col-md-6';
-      card.innerHTML = `
-        <div class="card p-3 shadow-sm border-0 bg-white" style="border-left: 4px solid ${colorMap(status)} !important;">
-          <div class="d-flex justify-content-between align-items-start">
-            <strong>${i.nome}</strong>
-            <span class="badge bg-light text-muted border small"><i class="bi bi-clock me-1"></i>${horarioFormatado}</span>
+      container.innerHTML += `
+        <div class="col-12 col-md-6">
+          <div class="card p-3 shadow-custom border-0 bg-white" style="border-left: 5px solid ${colorMap(status)} !important;">
+            <strong>${sanitize(i.nome)} (Quarto ${sanitize(i.quarto)})</strong>
+            <span>Status Clínico: <b style="color:${colorMap(status)}">${status.toUpperCase()}</b></span>
+            ${msgTexto}
           </div>
-          <span class="text-muted small d-block mt-1 text-start">Atenção requerida com base nas respostas.</span>
-          ${textoComplementar}
         </div>`;
-      container.appendChild(card);
     });
   }
 
   function carregarIdososParaAgenda() {
-    const select = document.getElementById('agendaIdoso');
-    if(!select) return;
-    select.innerHTML = '<option value="">-- Selecione o Residente --</option>';
-    idosos.forEach(i => {
-      const opt = document.createElement('option');
-      opt.value = i.id;
-      opt.textContent = i.nome;
-      select.appendChild(opt);
-    });
+    const s = document.getElementById('agendaIdoso'); if(s) { 
+      const valorAtual = s.value;
+      s.innerHTML = ''; 
+      idosos.forEach(i => { s.innerHTML += `<option value="${i.id}">${sanitize(i.nome)}</option>`; }); 
+      if (valorAtual) s.value = valorAtual;
+    }
   }
 
   function carregarTabelaAgenda() {
-    const corpoTabela = document.getElementById('tabelaAgendaCorpo');
-    if (!corpoTabela) return;
-    corpoTabela.innerHTML = '';
-
-    if (agenda.length === 0) {
-      corpoTabela.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum compromisso agendado.</td></tr>';
-      return;
-    }
-
-    const agendaOrdenada = [...agenda].sort((a, b) => `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`));
-
-    agendaOrdenada.forEach(ev => {
-      const idoso = idosos.find(i => i.id === ev.idosoId);
-      const nomeIdoso = idoso ? idoso.nome : "Não encontrado";
-      const [ano, mes, dia] = ev.data.split('-');
-
-      const linha = document.createElement('tr');
-      if (ev.concluido) linha.className = 'table-light text-decoration-line-through text-muted';
-
-      linha.innerHTML = `
-        <td><input type="checkbox" class="form-check-input ms-2" ${ev.concluido ? 'checked' : ''} onclick="alternarStatusAgenda('${ev.id}')"></td>
-        <td class="fw-bold">${nomeIdoso}</td>
-        <td><span class="badge bg-secondary me-1">${ev.tipo}</span> ${ev.descricao}</td>
-        <td><i class="bi bi-clock me-1"></i>${ev.hora} - ${dia}/${mes}</td>
-      `;
-      corpoTabela.appendChild(linha);
+    const corpo = document.getElementById('tabelaAgendaCorpo'); if(!corpo) return; corpo.innerHTML = '';
+    agenda.forEach(ev => {
+      const idoso = idosos.find(i => String(i.id) === String(ev.idosoId));
+      corpo.innerHTML += `
+        <tr class="${ev.concluido ? 'table-light text-decoration-line-through' : ''}">
+          <td><input type="checkbox" ${ev.concluido ? 'checked' : ''} onclick="alternarStatusAgenda('${ev.id}')"></td>
+          <td><b>${sanitize(idoso?.nome || 'Residente')}</b></td>
+          <td>${sanitize(ev.descricao)}</td>
+          <td>${sanitize(ev.data)} às ${sanitize(ev.hora)}</td>
+        </tr>`;
     });
   }
 
@@ -467,35 +402,20 @@
       data: document.getElementById('agendaData').value,
       hora: document.getElementById('agendaHora').value
     };
-
-    try {
-      await apiFetch('/agenda', { method: 'POST', body: JSON.stringify(dados) });
-      document.getElementById('formAgenda').reset();
-      sincronizarDadosServidor();
-    } catch (err) {
-      alert('Erro ao salvar agendamento.');
-    }
+    await apiFetch('/agenda', { method: 'POST', body: JSON.stringify(dados) });
+    document.getElementById('formAgenda').reset();
+    sincronizarDadosServidor();
   });
 
-  window.alternarStatusAgenda = async function(id) {
-    try {
-      await apiFetch(`/agenda/${id}/status`, { method: 'PATCH' });
-      sincronizarDadosServidor();
-    } catch (err) {
-      alert('Erro ao atualizar status do compromisso.');
-    }
-  };
+  window.alternarStatusAgenda = async function(id) { await apiFetch(`/agenda/${id}/status`, { method: 'PATCH' }); sincronizarDadosServidor(); };
 
-  document.querySelectorAll('#sidebar button[data-section]').forEach(btn => {
-    btn.addEventListener('click', () => switchSection(btn.getAttribute('data-section')));
+  document.querySelectorAll('#sidebar [data-section]').forEach(btn => {
+    btn.addEventListener('click', () => { switchSection(btn.getAttribute('data-section')); sidebar?.classList.remove('show'); });
   });
 
-  document.getElementById('btnAtualizar')?.addEventListener('click', sincronizarDadosServidor);
+  document.getElementById('toggleSidebar')?.addEventListener('click', () => sidebar?.classList.toggle('show'));
+  btnAtualizar?.addEventListener('click', sincronizarDadosServidor);
 
-  // Sincronização em segundo plano automática a cada 10 segundos
-  setInterval(() => {
-    if(usuarioLogado && usuarioPerfil === 'admin') sincronizarDadosServidor();
-  }, 10000);
-
+  setInterval(() => { if(usuarioLogado && usuarioPerfil === 'admin') sincronizarDadosServidor(); }, 10000);
   window.addEventListener('load', verificarAutenticacao);
 })();
