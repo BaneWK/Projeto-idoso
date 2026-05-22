@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laço - Monitoramento de Bem-Estar</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+  <div class="d-flex" id="app">
+
+    <aside id="sidebar" class="sidebar bg-white border-end d-none">
+      <div class="brand p-3 d-flex align-items-center">
+        <span class="logo rounded-circle bg-primary text-white me-2 d-flex align-items-center justify-content-center" style="width:38px;height:38px;">L</span>
+        <strong>Laço Admin</strong>
+      </div>
+      <nav class="nav flex-column px-3">
+        <button class="nav-link text-start" data-section="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</button>
+        <button class="nav-link text-start" data-section="cadastroIdoso"><i class="bi bi-person-plus me-2"></i>Cadastrar Idoso</button>
+        <button class="nav-link text-start" data-section="listaIdosos"><i class="bi bi-person-workspace me-2"></i>Lista de Idosos</button>
+        <button class="nav-link text-start" data-section="checkin"><i class="bi bi-clipboard-check me-2"></i>Check-in Diário</button>
+        <button class="nav-link text-start" data-section="alertas"><i class="bi bi-exclamation-triangle me-2"></i>Alertas</button>
+      </nav>
+    </aside>
+
+    <main class="flex-grow-1 w-100" style="min-height:100vh;">
+      
+      <header id="mainHeader" class="d-none align-items-center justify-content-between p-3 border-bottom bg-white sticky-top">
+        <div class="d-flex align-items-center gap-2">
+          <button id="toggleSidebar" class="btn btn-outline-secondary d-lg-none" aria-label="Abrir menu">
+            <i class="bi bi-list"></i>
+          </button>
+          <h1 class="h5 m-0">Laço</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small" id="userStatus"></span>
+          <button id="btnLogout" class="btn btn-outline-danger btn-sm" title="Sair">Sair</button>
+        </div>
+      </header>
+
+      <section id="loginSection" class="container py-5">
+        <div class="row justify-content-center">
+          <div class="col-12 col-md-6">
+            <div class="card shadow-sm p-4">
+              <h2 class="card-title mb-3 text-center">Entrar no Laço</h2>
+              <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+              <form id="loginForm" autocomplete="off">
+                <div class="mb-3">
+                  <label for="loginEmail" class="form-label">E-mail</label>
+                  <input type="email" class="form-control" id="loginEmail" placeholder="exemplo@dominio.com" required>
+                </div>
+                <div class="mb-3">
+                  <label for="loginPassword" class="form-label">Senha</label>
+                  <input type="password" class="form-control" id="loginPassword" placeholder="Sua senha" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Autenticar no Servidor</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="idosoSection" class="container py-5 text-center section" style="display:none;">
+        <h2 class="display-6 fw-bold mb-5">Olá! Como você está se sentining agora?</h2>
+        <div id="idosoStatusMsg" class="alert alert-success d-none fs-4">Status enviado com sucesso!</div>
+        <div class="row g-4 justify-content-center">
+          <div class="col-12">
+            <button onclick="enviarStatusIdoso('Bem')" class="btn btn-success btn-idoso shadow border-0">
+              <i class="bi bi-emoji-smile-fill me-3"></i>Estou Bem
+            </button>
+          </div>
+          <div class="col-12">
+            <button onclick="enviarStatusIdoso('Atenção')" class="btn btn-warning btn-idoso text-dark shadow border-0">
+              <i class="bi bi-emoji-neutral-fill me-3"></i>Mais ou Menos
+            </button>
+          </div>
+          <div class="col-12">
+            <button onclick="enviarStatusIdoso('Necessita Acompanhamento')" class="btn btn-danger btn-idoso shadow border-0">
+              <i class="bi bi-exclamation-triangle-fill me-3"></i>Preciso de Ajuda
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="container py-4 section" style="display:none;">
+        <div class="row mb-3 align-items-end">
+          <div class="col-md-8">
+            <h2>Dashboard Administrativa</h2>
+            <p class="text-muted small mb-0">Status consolidado da instituição em tempo real.</p>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <button id="btnAtualizar" class="btn btn-outline-success btn-sm">Sincronizar Agora</button>
+          </div>
+        </div>
+        <div class="row g-3 mb-4" id="dashboardCards"></div>
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Tendência Semanal de Humor Global</h5>
+            <div id="weeklyChart" class="d-flex align-items-end" style="height:140px;"></div>
+            <div class="d-flex justify-content-between text-muted small mt-2" id="chartLegend"></div>
+          </div>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Painel de Monitoramento Geral</h5>
+            <div id="geralIdosos" class="row g-3"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cadastroIdoso" class="container py-4 section" style="display:none;">
+        <h2 class="mb-3">Cadastrar Novo Idoso</h2>
+        <div class="row">
+          <div class="col-md-6">
+            <form id="formCadastroIdoso" class="card p-3 shadow-sm">
+              <div class="mb-3">
+                <label for="cadNome" class="form-label">Nome Completo</label>
+                <input id="cadNome" type="text" class="form-control" required>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label for="cadIdade" class="form-label">Idade</label>
+                  <input id="cadIdade" type="number" class="form-control" required>
+                </div>
+                <div class="col-6">
+                  <label for="cadQuarto" class="form-label">Quarto/Leito</label>
+                  <input id="cadQuarto" type="text" class="form-control">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="cadEmail" class="form-label">E-mail de Login do Idoso</label>
+                <input id="cadEmail" type="email" class="form-control" placeholder="Para ele usar no tablet/celular" required>
+              </div>
+              <div class="mb-3">
+                <label for="cadSenha" class="form-label">Senha de Acesso</label>
+                <input id="cadSenha" type="password" class="form-control" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Salvar no Servidor</button>
+              <div id="cadIdosoMsg" class="mt-2 text-success small d-none">Cadastrado com sucesso!</div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="listaIdosos" class="container py-4 section" style="display:none;">
+        <h2 class="mb-3">Idosos Sob Monitoramento</h2>
+        <div id="idososGrid" class="row g-3"></div>
+      </section>
+
+      <section id="checkin" class="container py-4 section" style="display:none;">
+        <h2 class="mb-3">Evolução Clínica / Check-in Diário</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card p-3 shadow-sm mb-3">
+              <label for="selectIdoso" class="form-label fw-bold">Selecionar Residente</label>
+              <select id="selectIdoso" class="form-select"></select>
+            </div>
+            <div class="card shadow-sm" id="historicoCheckinRow" style="display:none;">
+              <div class="card-body">
+                <h6 class="text-muted mb-3">Histórico de Humor Interno (Últimos 7 dias)</h6>
+                <div id="historicoCheckin" class="d-flex align-items-end gap-2" style="height:120px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <form id="formCheckin" class="card p-3 shadow-sm">
+              <div class="mb-2">
+                <label class="form-label">Humor Observado</label>
+                <select id="checkinHumor" class="form-select" required>
+                  <option value="Bem">Bem</option>
+                  <option value="Atenção">Atenção</option>
+                  <option value="Necessita Acompanhamento">Necessita Acompanhamento</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label for="checkinAlimento" class="form-label">Alimentação</label>
+                <input id="checkinAlimento" type="text" class="form-control">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Interação Social</label>
+                <select id="checkinSocial" class="form-select" required>
+                  <option value="Regular">Regular</option>
+                  <option value="Pouca">Pouca</option>
+                  <option value="Quase nenhuma">Quase nenhuma</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label for="checkinVisitas" class="form-label">Visitas Recebidas</label>
+                <input id="checkinVisitas" type="text" class="form-control">
+              </div>
+              <div class="mb-2">
+                <label for="checkinObservacoes" class="form-label">Notas do Cuidador/Enfermagem</label>
+                <textarea id="checkinObservacoes" class="form-control" rows="2"></textarea>
+              </div>
+              <button type="submit" class="btn btn-success">Registrar Evolução</button>
+              <div id="checkinMsg" class="mt-2 small text-success d-none">Gravado no servidor.</div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="alertas" class="container py-4 section" style="display:none;">
+        <h2 class="text-danger mb-3">Alertas Críticos Ativos</h2>
+        <div id="alertasList" class="row g-3"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
