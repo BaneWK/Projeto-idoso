@@ -83,6 +83,13 @@
         throw new Error('Sessão expirada.');
       }
       
+      const contentType = resposta.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textoErro = await resposta.text();
+        console.error("Resposta não-JSON recebida do servidor:", textoErro);
+        throw new Error("O servidor retornou uma resposta inválida (HTML/Texto). Verifique as rotas do backend.");
+      }
+
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.mensagem || 'Erro na comunicação.');
       return dados;
@@ -259,10 +266,11 @@
     try {
       await apiFetch('/checkins', { method: 'POST', body: JSON.stringify(dados) });
       document.getElementById('formCheckin').reset();
-      sincronizarDadosServidor();
-      alert('Prontuário salvo.');
+      await sincronizarDadosServidor();
+      alert('Prontuário salvo com sucesso.');
+      switchSection('dashboard');
     } catch (err) {
-      alert('Erro operacional.');
+      alert('Erro operacional ao salvar prontuário.');
     }
   });
 
@@ -322,9 +330,11 @@
     if(!select) return;
     
     const valorAtual = select.value;
-    
     select.innerHTML = '<option value="">-- Selecione --</option>';
-    idosos.forEach(i => { select.innerHTML += `<option value="${i.id}">${sanitize(i.nome)}</option>`; });
+    
+    idosos.forEach(i => { 
+      select.innerHTML += `<option value="${i.id}">${sanitize(i.nome)}</option>`; 
+    });
     
     if (valorAtual) {
       select.value = valorAtual;
@@ -389,7 +399,16 @@
           <td><b>${sanitize(idoso?.nome || 'Residente')}</b></td>
           <td>${sanitize(ev.descricao)}</td>
           <td>${sanitize(ev.data)} às ${sanitize(ev.hora)}</td>
+          <td><button class="btn btn-sm btn-link text-danger p-0 btn-deletar-agenda" data-id="${ev.id}"><i class="bi bi-trash"></i> Excluir</button></td>
         </tr>`;
+    });
+
+    document.querySelectorAll('.btn-deletar-agenda').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const id = this.getAttribute('data-id');
+        window.deletarAgenda(id);
+      });
     });
   }
 
@@ -409,8 +428,19 @@
 
   window.alternarStatusAgenda = async function(id) { await apiFetch(`/agenda/${id}/status`, { method: 'PATCH' }); sincronizarDadosServidor(); };
 
+  window.deletarAgenda = async function(id) {
+    if (confirm("Deseja remover este agendamento da escala?")) {
+      try {
+        await apiFetch(`/agenda/${id}`, { method: 'DELETE' });
+        sincronizarDadosServidor();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  };
+
   document.querySelectorAll('#sidebar [data-section]').forEach(btn => {
-    btn.addEventListener('click', () => { switchSection(btn.getAttribute('data-section')); sidebar?.classList.remove('show'); });
+    btn.addEventListener('click', () => { switchSection(btn.getAttribute('data-section')); sidebar?.classList.toggle('show'); });
   });
 
   document.getElementById('toggleSidebar')?.addEventListener('click', () => sidebar?.classList.toggle('show'));

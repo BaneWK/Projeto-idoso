@@ -1,0 +1,142 @@
+:root {
+  --bg-app: #f2f6fa;
+  --card-bg: #ffffff;
+  --primary: #3a506b;
+  --accent: #5bc0be;
+  --pastel-green: #eafaf1;
+  --text-green: #27ae60;
+  --pastel-yellow: #fef9e7;
+  --text-yellow: #f39c12;
+  --pastel-red: #fdedec;
+  --text-red: #c0392b;
+  --text-main: #2c3e50;
+}
+
+* { 
+  box-sizing: border-box; 
+}
+
+body { 
+  margin: 0; 
+  background-color: var(--bg-app); 
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.shadow-custom {
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.12) !important;
+}
+
+.form-control, .form-select {
+  border-radius: 10px;
+  border: 1.5px solid #dce4ec;
+  padding: 0.75rem 1rem;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+}
+
+.btn-success-custom {
+  background-color: var(--text-green);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+}
+
+.btn-danger-custom {
+  background-color: var(--pastel-red);
+  color: var(--text-red);
+  border: 1.5px solid var(--text-red);
+  border-radius: 10px;
+}
+
+.header-custom {
+  background-color: var(--card-bg);
+  border-bottom: 1px solid #eef2f5;
+  height: 75px;
+}
+
+.sidebar { 
+  background-color: var(--card-bg);
+  border-right: 1px solid #eef2f5;
+  min-height: calc(100vh - 75px);
+  width: 280px; 
+}
+.sidebar-wrapper {
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sidebar-item {
+  color: #617d98;
+  text-align: left; 
+  width: 100%; 
+  border: 0; 
+  background: transparent; 
+  padding: 14px 20px; 
+  border-radius: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.sidebar-item:hover {
+  background-color: #f0f4f8;
+  color: var(--primary);
+}
+.sidebar-item.active { 
+  background-color: var(--pastel-green); 
+  color: var(--text-green); 
+}
+.positional-alert.active {
+  background-color: var(--pastel-red);
+  color: var(--text-red);
+}
+
+.max-width-form { max-width: 600px; }
+.max-width-form-wide { max-width: 800px; }
+.max-width-idoso { max-width: 650px; }
+
+/* 👵 DESIGN DE ACESSIBILIDADE E ERGONOMIA PARA IDOSOS */
+.btn-idoso {
+  width: 100%;
+  padding: 30px 24px !important;
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  border-radius: 24px !important;
+  border: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  transition: transform 0.1s ease;
+}
+.btn-idoso:active {
+  transform: scale(0.97);
+}
+.btn-idoso-success { background-color: #d4efdf !important; color: #196f3d !important; border: 3px solid #27ae60 !important; }
+.btn-idoso-warning { background-color: #fcf3cf !important; color: #7e5109 !important; border: 3px solid #f1c40f !important; }
+.btn-idoso-danger { background-color: #f9e7e9 !important; color: #78281f !important; border: 3px solid #c0392b !important; }
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.animate-pulse {
+  animation: pulse 2.5s infinite ease-in-out;
+  display: inline-block;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar { 
+    display: none;
+    position: absolute;
+    z-index: 9999;
+  }
+  .sidebar.show {
+    display: block;
+  }
+}

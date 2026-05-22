@@ -1,278 +1,271 @@
-<!doctype html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Laço - Monitoramento de Bem-Estar</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laço Vital - Gestão Integrada de Cuidados</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
 
-  <div class="d-flex" id="app">
-
-    <aside id="sidebar" class="sidebar bg-white border-end d-none">
-      <div class="brand p-3 d-flex align-items-center">
-        <span class="logo rounded-circle bg-primary text-white me-2 d-flex align-items-center justify-content-center" style="width:38px;height:38px;">L</span>
-        <strong>Laço Admin</strong>
+  <div id="loginSection" class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-10 col-md-6 col-lg-4">
+        <div class="card p-4 shadow-custom border-0 text-center">
+          <div class="brand-logo mb-3">❤️</div>
+          <h2 class="h3 mb-2 text-primary fw-bold">Laço Vital</h2>
+          <p class="text-muted small mb-4">Plataforma de Cuidados e Acompanhamento Residente</p>
+          <form id="loginForm" class="text-start">
+            <div class="mb-3">
+              <label for="loginEmail" class="form-label font-comfortable">E-mail</label>
+              <input type="email" id="loginEmail" class="form-control form-control-lg" required placeholder="nome@exemplo.com">
+            </div>
+            <div class="mb-3">
+              <label for="loginPassword" class="form-label font-comfortable">Senha</label>
+              <input type="password" id="loginPassword" class="form-control form-control-lg" required placeholder="******">
+            </div>
+            <div id="loginError" class="alert alert-danger d-none small p-2.5" role="alert"></div>
+            <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-lg w-100 fw-bold mt-2">Acessar Painel</button>
+          </form>
+        </div>
       </div>
-      <nav class="nav flex-column px-3">
-        <button class="nav-link text-start" data-section="dashboard"><i class="bi bi-speedometer2 me-2"></i>Dashboard</button>
-        <button class="nav-link text-start" data-section="calendario"><i class="bi bi-calendar3 me-2"></i>Calendário de Cuidados</button>
-        <button class="nav-link text-start" data-section="cadastroIdoso"><i class="bi bi-person-plus me-2"></i>Cadastrar Idoso</button>
-        <button class="nav-link text-start" data-section="listaIdosos"><i class="bi bi-person-workspace me-2"></i>Lista de Idosos</button>
-        <button class="nav-link text-start" data-section="checkin"><i class="bi bi-clipboard-check me-2"></i>Check-in Diário</button>
-        <button class="nav-link text-start" data-section="alertas"><i class="bi bi-exclamation-triangle me-2"></i>Alertas</button>
+    </div>
+  </div>
+
+  <div id="appContainer" class="container-fluid p-0 d-none">
+    <header id="mainHeader" class="header-custom shadow-sm p-3 d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <button id="toggleSidebar" class="btn btn-light d-lg-none" aria-label="Alternar Menu"><i class="bi bi-list fs-4"></i></button>
+        <h1 class="h4 m-0 text-primary fw-bold"><i class="bi bi-heart-pulse-fill text-accent me-2"></i>Laço Vital</h1>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span id="userStatus" class="badge bg-light text-secondary border p-2 d-none d-sm-inline-block"></span>
+        <button id="btnAtualizar" class="btn btn-light" title="Sincronizar Dados"><i class="bi bi-arrow-clockwise"></i></button>
+        <button id="btnLogout" class="btn btn-danger-custom btn-sm fw-bold px-3"><i class="bi bi-box-arrow-right me-1"></i> Sair</button>
+      </div>
+    </header>
+
+    <div class="row g-0">
+      <nav id="sidebar" class="sidebar shadow-sm col-12 col-lg-auto" aria-label="Menu principal">
+        <div class="sidebar-wrapper">
+          <button data-section="dashboard" class="sidebar-item active"><i class="bi bi-speedometer2 me-3"></i>Dashboard</button>
+          <button data-section="listaIdosos" class="sidebar-item"><i class="bi bi-people me-3"></i>Residentes</button>
+          <button data-section="cadastroIdoso" class="sidebar-item"><i class="bi bi-person-plus me-3"></i>Cadastrar Idoso</button>
+          <button data-section="checkin" class="sidebar-item"><i class="bi bi-clipboard-pulse me-3"></i>Evolução de Prontuário</button>
+          <button data-section="calendario" class="sidebar-item"><i class="bi bi-calendar3 me-3"></i>Agenda e Tarefas</button>
+          <button data-section="alertas" class="sidebar-item positional-alert"><i class="bi bi-exclamation-triangle me-3"></i>Alertas Críticos <span id="badgeAlertCount" class="badge bg-danger text-white ms-auto d-none">0</span></button>
+        </div>
       </nav>
-    </aside>
 
-    <main class="flex-grow-1 w-100" style="min-height:100vh;">
-      
-      <header id="mainHeader" class="d-none align-items-center justify-content-between p-3 border-bottom bg-white sticky-top">
-        <div class="d-flex align-items-center gap-2">
-          <button id="toggleSidebar" class="btn btn-outline-secondary d-lg-none" aria-label="Abrir menu">
-            <i class="bi bi-list"></i>
-          </button>
-          <h1 class="h5 m-0">Laço</h1>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          <span class="text-muted small" id="userStatus"></span>
-          <button id="btnLogout" class="btn btn-outline-danger btn-sm" title="Sair">Sair</button>
-        </div>
-      </header>
-
-      <section id="loginSection" class="container py-5">
-        <div class="row justify-content-center">
-          <div class="col-12 col-md-6">
-            <div class="card shadow-sm p-4">
-              <h2 class="card-title mb-3 text-center">Entrar no Laço</h2>
-              <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
-              <form id="loginForm" autocomplete="off">
-                <div class="mb-3">
-                  <label for="loginEmail" class="form-label">E-mail</label>
-                  <input type="email" class="form-control" id="loginEmail" placeholder="exemplo@dominio.com" required>
-                </div>
-                <div class="mb-3">
-                  <label for="loginPassword" class="form-label">Senha</label>
-                  <input type="password" class="form-control" id="loginPassword" placeholder="Sua senha" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 py-2">Autenticar no Servidor</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="idosoSection" class="container py-5 text-center section" style="display:none;">
-        <h2 class="display-6 fw-bold mb-5">Olá! Como você está se sentindo agora?</h2>
+      <main id="mainContent" class="p-4 col">
         
-        <div id="idosoStatusMsg" class="alert alert-success d-none fs-4 p-4 shadow-sm text-center">
-          <div id="agradecimentoTexto" class="fw-bold mb-3">
-            ❤️ Muito obrigado por avisar! <br>
-            <span class="fs-5 fw-normal text-muted">Já recebemos o seu status.</span>
-          </div>
-          
-          <div id="campoSentimentoOpcional" class="mt-4 p-3 bg-white rounded shadow-sm" style="max-width: 500px; margin: 0 auto;">
-            <label for="idosoRelato" class="form-label fs-5 fw-bold text-dark mb-2">
-              Quer escrever ou contar mais alguma coisa? (Opcional)
-            </label>
-            <textarea id="idosoRelato" class="form-control fs-5" rows="3" placeholder="Ex: Estou com uma leve dor de cabeça, cansaço, ou só quero conversar..."></textarea>
-            <div class="d-flex gap-2 justify-content-center mt-3">
-              <button id="btnEnviarRelato" class="btn btn-primary btn-lg px-4">Enviar Texto</button>
-              <button id="btnFecharRelato" class="btn btn-outline-secondary btn-lg px-4">Agora Não</button>
-            </div>
-          </div>
-        </div>
+        <section id="dashboard" class="section-view">
+          <h2 class="h3 text-primary fw-bold mb-1">Visão Geral Institucional</h2>
+          <p class="text-muted small mb-4">Dados consolidados em tempo real sobre a rotina.</p>
+          <div id="dashboardCards" class="row g-3 mb-4"></div>
+          <h3 class="h4 text-primary fw-bold mb-3">Painel Clínico de Monitoramento Rápido</h3>
+          <div id="idososGrid" class="row g-3"></div>
+        </section>
 
-        <div class="row g-4 justify-content-center">
-          <div class="col-12">
-            <button onclick="enviarStatusIdoso('Bem')" class="btn btn-success btn-idoso shadow border-0">
-              <i class="bi bi-emoji-smile-fill me-3"></i>Estou Bem
-            </button>
-          </div>
-          <div class="col-12">
-            <button onclick="enviarStatusIdoso('Atenção')" class="btn btn-warning btn-idoso text-dark shadow border-0">
-              <i class="bi bi-emoji-neutral-fill me-3"></i>Mais ou Menos
-            </button>
-          </div>
-          <div class="col-12">
-            <button onclick="enviarStatusIdoso('Necessita Acompanhamento')" class="btn btn-danger btn-idoso shadow border-0">
-              <i class="bi bi-exclamation-triangle-fill me-3"></i>Preciso de Ajuda
-            </button>
-          </div>
-        </div>
-      </section>
+        <section id="listaIdosos" class="section-view" style="display:none;">
+          <h2 class="h3 text-primary fw-bold mb-4">Prontuários e Residentes Ativos</h2>
+          <div id="geralIdosos" class="row g-3"></div>
+        </section>
 
-      <section id="calendario" class="container py-4 section" style="display:none;">
-        <h2 class="mb-3">Calendário e Agenda de Cuidados</h2>
-        <p class="text-muted small">Gerencie cronogramas de medicamentos, consultas e rotinas dos residentes.</p>
-        
-        <div class="row g-4">
-          <div class="col-md-5">
-            <form id="formAgenda" class="card p-3 shadow-sm">
-              <h5 class="card-title mb-3 text-primary">Novo Agendamento</h5>
-              <div class="mb-2">
-                <label for="agendaIdoso" class="form-label">Residente</label>
-                <select id="agendaIdoso" class="form-select" required></select>
-              </div>
-              <div class="mb-2">
-                <label for="agendaTipo" class="form-label">Tipo de Evento</label>
-                <select id="agendaTipo" class="form-select" required>
-                  <option value="Medicamento">Medicamento</option>
-                  <option value="Consulta">Consulta Médica</option>
-                  <option value="Atividade">Atividade / Fisioterapia</option>
-                </select>
-              </div>
-              <div class="mb-2">
-                <label for="agendaDescricao" class="form-label">Descrição</label>
-                <input id="agendaDescricao" type="text" class="form-control" placeholder="Ex: Paracetamol 500mg" required>
-              </div>
-              <div class="row g-2 mb-3">
-                <div class="col-6">
-                  <label for="agendaData" class="form-label">Data</label>
-                  <input id="agendaData" type="date" class="form-control" required>
-                </div>
-                <div class="col-6">
-                  <label for="agendaHora" class="form-label">Horário</label>
-                  <input id="agendaHora" type="time" class="form-control" required>
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary">Adicionar à Agenda</button>
-            </form>
-          </div>
-          
-          <div class="col-md-7">
-            <div class="card p-3 shadow-sm h-100">
-              <h5 class="card-title mb-3">Compromissos Agendados</h5>
-              <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                  <thead class="table-light">
-                    <tr>
-                      <th>Status</th>
-                      <th>Residente</th>
-                      <th>Compromisso</th>
-                      <th>Data/Hora</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tabelaAgendaCorpo"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="dashboard" class="container py-4 section" style="display:none;">
-        <div class="row mb-3 align-items-end">
-          <div class="col-md-8">
-            <h2>Dashboard Administrativa</h2>
-            <p class="text-muted small mb-0">Status consolidado em tempo real.</p>
-          </div>
-          <div class="col-md-4 text-md-end">
-            <button id="btnAtualizar" class="btn btn-outline-success btn-sm">Sincronizar Agora</button>
-          </div>
-        </div>
-        <div class="row g-3 mb-4" id="dashboardCards"></div>
-        <div class="card mb-4 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title mb-3">Painel de Monitoramento Geral</h5>
-            <div id="geralIdosos" class="row g-3"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="cadastroIdoso" class="container py-4 section" style="display:none;">
-        <h2 class="mb-3">Cadastrar Novo Idoso</h2>
-        <div class="row">
-          <div class="col-md-6">
-            <form id="formCadastroIdoso" class="card p-3 shadow-sm">
+        <section id="cadastroIdoso" class="section-view" style="display:none;">
+          <div class="card p-4 shadow-custom border-0 max-width-form">
+            <h2 class="h3 text-primary fw-bold mb-2">Cadastrar Novo Residente</h2>
+            <p class="text-muted small mb-4">Crie o perfil clínico e as credenciais do idoso.</p>
+            <form id="formCadastroIdoso">
               <div class="mb-3">
                 <label for="cadNome" class="form-label">Nome Completo</label>
-                <input id="cadNome" type="text" class="form-control" required>
+                <input type="text" id="cadNome" class="form-control form-control-lg" required>
               </div>
-              <div class="row g-2 mb-3">
-                <div class="col-6">
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3">
                   <label for="cadIdade" class="form-label">Idade</label>
-                  <input id="cadIdade" type="number" class="form-control" required>
+                  <input type="number" id="cadIdade" class="form-control form-control-lg" required min="0">
                 </div>
-                <div class="col-6">
-                  <label for="cadQuarto" class="form-label">Quarto/Leito</label>
-                  <input id="cadQuarto" type="text" class="form-control">
+                <div class="col-12 col-sm-6 mb-3">
+                  <label for="cadQuarto" class="form-label">Acomodação / Quarto</label>
+                  <input type="text" id="cadQuarto" class="form-control form-control-lg" required placeholder="Ala B - 104">
                 </div>
               </div>
               <div class="mb-3">
-                <label for="cadEmail" class="form-label">E-mail de Login do Idoso</label>
-                <input id="cadEmail" type="email" class="form-control" placeholder="Para uso em tablets" required>
+                <label for="cadEmail" class="form-label">E-mail para Login</label>
+                <input type="email" id="cadEmail" class="form-control form-control-lg" required placeholder="idoso@laco.com">
               </div>
-              <div class="mb-3">
-                <label for="cadSenha" class="form-label">Senha de Acesso</label>
-                <input id="cadSenha" type="password" class="form-control" required>
+              <div class="mb-4">
+                <label for="cadSenha" class="form-label">Senha Inicial</label>
+                <input type="password" id="cadSenha" class="form-control form-control-lg" required>
               </div>
-              <button type="submit" class="btn btn-primary">Salvar no Servidor</button>
-              <div id="cadIdosoMsg" class="mt-2 text-success small d-none">Cadastrado com sucesso!</div>
+              <div id="cadIdosoMsg" class="alert alert-success d-none p-2.5 small" role="alert"></div>
+              <button type="submit" id="btnCadastrarSubmit" class="btn btn-success-custom btn-lg w-100 fw-bold">Concluir Registro</button>
             </form>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section id="listaIdosos" class="container py-4 section" style="display:none;">
-        <h2 class="mb-3">Idosos Sob Monitoramento</h2>
-        <div id="idososGrid" class="row g-3"></div>
-      </section>
+        <section id="checkin" class="section-view" style="display:none;">
+          <div class="card p-4 shadow-custom border-0 max-width-form-wide">
+            <h2 class="h3 text-primary fw-bold mb-2">Evolução Diária de Enfermagem</h2>
+            <p class="text-muted small mb-4">Registro técnico periódico obrigatório.</p>
+            <form id="formCheckin">
+              <div class="mb-3">
+                <label for="selectIdoso" class="form-label">Selecione o Residente</label>
+                <select id="selectIdoso" class="form-select form-select-lg" required></select>
+              </div>
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3">
+                  <label for="checkinHumor" class="form-label">Humor</label>
+                  <select id="checkinHumor" class="form-select form-select-lg">
+                    <option value="Bem">Estável / Bom Humor (Verde)</option>
+                    <option value="Atenção">Atenção / Mudança Súbita (Amarelo)</option>
+                    <option value="Crítico">Instável / Crítico (Vermelho)</option>
+                  </select>
+                </div>
+                <div class="col-12 col-sm-6 mb-3">
+                  <label for="checkinAlimento" class="form-label">Ingestão Alimentar</label>
+                  <select id="checkinAlimento" class="form-select form-select-lg">
+                    <option value="Excelente">Alimentação Completa</option>
+                    <option value="Parcial">Alimentação Parcial</option>
+                    <option value="Recusou">Recusa Alimentar Total</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12 col-sm-6 mb-3">
+                  <label for="checkinSocial" class="form-label">Interação Social</label>
+                  <select id="checkinSocial" class="form-select form-select-lg">
+                    <option value="Ativo">Participativo</option>
+                    <option value="Isolado">Recusa social / Isolado</option>
+                  </select>
+                </div>
+                <div class="col-12 col-sm-6 mb-3">
+                  <label for="checkinVisitas" class="form-label">Recebeu Visitas?</label>
+                  <select id="checkinVisitas" class="form-select form-select-lg">
+                    <option value="Não">Não</option>
+                    <option value="Sim">Sim</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-4">
+                <label for="checkinObservacoes" class="form-label">Sintomatologia e Notas Clínicas</label>
+                <textarea id="checkinObservacoes" class="form-control form-control-lg" rows="4" placeholder="Registrar queixas físicas, alterações de PA..."></textarea>
+              </div>
+              <div id="checkinMsg" class="alert alert-success d-none p-2.5 small" role="alert"></div>
+              <button type="submit" id="btnCheckinSubmit" class="btn btn-primary btn-lg w-100 fw-bold">Salvar no Prontuário</button>
+            </form>
+          </div>
+        </section>
 
-      <section id="checkin" class="container py-4 section" style="display:none;">
-        <h2 class="mb-3">Evolução Clínica / Check-in Diário</h2>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="card p-3 shadow-sm mb-3">
-              <label for="selectIdoso" class="form-label fw-bold">Selecionar Residente</label>
-              <select id="selectIdoso" class="form-select"></select>
+        <section id="calendario" class="section-view" style="display:none;">
+          <h2 class="h3 text-primary fw-bold mb-4">Escala de Horários e Agenda Médica</h2>
+          <div class="row g-4">
+            <div class="col-12 col-xl-4">
+              <div class="card p-4 border-0 shadow-custom text-start">
+                <h3 class="h5 text-primary fw-bold mb-3">Agendar Novo Evento</h3>
+                <form id="formAgenda">
+                  <div class="mb-3">
+                    <label for="agendaIdoso" class="form-label small">Residente Relacionado</label>
+                    <select id="agendaIdoso" class="form-select" required></select>
+                  </div>
+                  <div class="mb-3">
+                    <label for="agendaTipo" class="form-label small">Categoria</label>
+                    <select id="agendaTipo" class="form-select">
+                      <option value="Consulta">Consulta Médica / Exame</option>
+                      <option value="Medicamento">Administração de Medicamento</option>
+                      <option value="Atividade">Fisioterapia / Atividade Cognitiva</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label for="agendaDescricao" class="form-label small">Descrição Detalhada</label>
+                    <input type="text" id="agendaDescricao" class="form-control" required>
+                  </div>
+                  <div class="row g-2 mb-4">
+                    <div class="col-6">
+                      <label for="agendaData" class="form-label small">Data</label>
+                      <input type="date" id="agendaData" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                      <label for="agendaHora" class="form-label small">Horário Exato</label>
+                      <input type="time" id="agendaHora" class="form-control" required>
+                    </div>
+                  </div>
+                  <button type="submit" id="btnAgendaSubmit" class="btn btn-primary w-100 fw-bold">Inserir na Agenda</button>
+                </form>
+              </div>
+            </div>
+            <div class="col-12 col-xl-8">
+              <div class="card border-0 shadow-custom p-3">
+                <div class="table-responsive">
+                  <table class="table align-middle table-hover m-0">
+                    <thead>
+                      <tr>
+                        <th style="width: 50px;">Status</th>
+                        <th>Residente</th>
+                        <th>Compromisso</th>
+                        <th>Data/Hora</th>
+                        <th style="width: 90px;">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tabelaAgendaCorpo"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="col-md-6">
-            <form id="formCheckin" class="card p-3 shadow-sm">
-              <div class="mb-2">
-                <label class="form-label">Humor Observado</label>
-                <select id="checkinHumor" class="form-select" required>
-                  <option value="Bem">Bem</option>
-                  <option value="Atenção">Atenção</option>
-                  <option value="Necessita Acompanhamento">Necessita Acompanhamento</option>
-                </select>
+        </section>
+
+        <section id="alertas" class="section-view" style="display:none;">
+          <h2 class="h3 text-danger fw-bold mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Central de Monitoramento de Alertas</h2>
+          <p class="text-muted small mb-4">Acompanhamento imediato de desestabilizações e recados digitados pelos próprios idosos.</p>
+          <div id="alertasList" class="row g-3"></div>
+        </section>
+
+        <section id="idosoSection" class="section-view" style="display:none;">
+          <div id="idosoMainInterface" class="container text-center py-4 max-width-idoso">
+            <h1 class="display-5 text-primary fw-bold mb-3">Olá! Como você está se sentindo hoje?</h1>
+            <p class="text-secondary fs-4 mb-5">Escolha a opção que melhor descreve seu sentimento:</p>
+            
+            <div class="d-flex flex-column align-items-center gap-3 mb-5">
+              <button class="btn btn-idoso btn-idoso-success" onclick="enviarStatusIdoso('Bem')">😊 Estou Bem</button>
+              <button class="btn btn-idoso btn-idoso-warning" onclick="enviarStatusIdoso('Atenção')">😐 Mais ou Menos</button>
+              <button class="btn btn-idoso btn-idoso-danger" onclick="enviarStatusIdoso('Crítico')">🙁 Preciso de Ajuda</button>
+            </div>
+            
+            <div id="idosoStatusMsg" class="alert card p-4 shadow-custom d-none border-0 text-start" aria-live="polite">
+              <h4 class="text-success fw-bold d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-check-circle-fill"></i> Recebemos seu aviso! ❤️
+              </h4>
+              <p class="text-muted fs-5 mb-4">Nossa equipe de cuidadores já foi avisada.</p>
+              
+              <div id="campoSentimentoOpcional" class="w-100">
+                <label for="idosoRelato" class="form-label text-dark fw-bold fs-5 mb-2">Quer nos contar mais alguma coisa? (Opcional)</label>
+                <textarea id="idosoRelato" class="form-control form-control-lg mb-3" rows="3" placeholder="Escreva aqui se tiver alguma dor ou pedido..."></textarea>
+                <div class="d-flex gap-3">
+                  <button id="btnEnviarRelato" class="btn btn-primary btn-lg px-5 fw-bold fs-5">Enviar Mensagem</button>
+                  <button id="btnFecharRelato" class="btn btn-outline-secondary btn-lg px-4 fs-5">Não, fechar</button>
+                </div>
               </div>
-              <div class="mb-2">
-                <label for="checkinAlimento" class="form-label">Alimentação</label>
-                <input id="checkinAlimento" type="text" class="form-control">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Interação Social</label>
-                <select id="checkinSocial" class="form-select" required>
-                  <option value="Regular">Regular</option>
-                  <option value="Pouca">Pouca</option>
-                  <option value="Quase nenhuma">Quase nenhuma</option>
-                </select>
-              </div>
-              <div class="mb-2">
-                <label for="checkinVisitas" class="form-label">Visitas Recebidas</label>
-                <input id="checkinVisitas" type="text" class="form-control">
-              </div>
-              <div class="mb-2">
-                <label for="checkinObservacoes" class="form-label">Notas do Cuidador/Enfermagem</label>
-                <textarea id="checkinObservacoes" class="form-control" rows="2"></textarea>
-              </div>
-              <button type="submit" class="btn btn-success">Registrar Evolução</button>
-              <div id="checkinMsg" class="mt-2 small text-success d-none">Gravado no servidor.</div>
-            </form>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <section id="alertas" class="container py-4 section" style="display:none;">
-        <h2 class="text-danger mb-3">Alertas Críticos Ativos</h2>
-        <div id="alertasList" class="row g-3"></div>
-      </section>
+          <div id="idosoCooldownScreen" class="container text-center py-5 d-none max-width-idoso">
+            <div class="card p-5 shadow-custom border-0 bg-white rounded-4">
+              <div class="display-1 text-danger animate-pulse mb-3">❤️</div>
+              <h2 class="text-primary display-6 fw-bold mb-3">Aviso Enviado com Sucesso!</h2>
+              <p class="fs-4 text-secondary mb-4">Fique tranquilo, nossa equipe já está ciente e cuidando de você.</p>
+              <div class="p-4 bg-light rounded-3 mb-4 border-start border-5 border-primary text-start">
+                <p class="m-0 text-muted fs-5 lh-base font-italic">"Agora você já pode fechar o aplicativo com segurança e descansar! Obrigado por falar com a gente."</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-    </main>
+      </main>
+    </div>
   </div>
 
   <script src="script.js"></script>

@@ -73,7 +73,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const idoso = db.idosos.find(i => i.email === email);
     if (!idoso) {
-      return res.status(400).json({ mensagem: "Credenciais incorretas ou usuário inexistente." });
+      return res.status(400).json({ mensagem: "Credenciais incorretas ou usuário instruído inexistente." });
     }
 
     const senhaValida = await bcrypt.compare(password, idoso.senha);
@@ -142,7 +142,7 @@ app.delete('/api/idosos/:id', autenticarToken, async (req, res) => {
     db.agenda = db.agenda.filter(a => String(a.idosoId) !== String(id));
     db.checkins = db.checkins.filter(c => String(c.idosoId) !== String(id));
     await saveDB();
-    return res.json({ sucesso: true, mensagem: "Registro removido com sucesso." });
+    return res.json({ sucesso: true, message: "Registro removido com sucesso." });
   }
   res.status(404).json({ mensagem: "Residente não encontrado." });
 });
@@ -152,11 +152,23 @@ app.get('/api/checkins', autenticarToken, (req, res) => {
 });
 
 app.post('/api/checkins', autenticarToken, async (req, res) => {
+  const { idosoId, humorDia, alimentacao, interacaoSocial, visitas, observacoes } = req.body;
+  
+  if (!idosoId) {
+    return res.status(400).json({ mensagem: "Identificação do idoso obrigatória." });
+  }
+
   const novoCheckin = {
     id: String(Date.now()),
     data: new Date().toISOString(),
-    ...req.body
+    idosoId,
+    humorDia,
+    alimentacao,
+    interacaoSocial,
+    visitas,
+    observacoes
   };
+  
   db.checkins.unshift(novoCheckin);
   await saveDB();
   res.status(201).json(novoCheckin);
@@ -234,6 +246,18 @@ app.patch('/api/agenda/:id/status', autenticarToken, async (req, res) => {
     return res.json(tarefa);
   }
   res.status(404).json({ mensagem: "Tarefa não localizada." });
+});
+
+app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
+  const { id } = req.params;
+  const index = db.agenda.findIndex(a => String(a.id) === String(id));
+
+  if (index !== -1) {
+    db.agenda.splice(index, 1);
+    await saveDB();
+    return res.json({ sucesso: true, mensagem: "Agendamento removido com sucesso." });
+  }
+  res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
 initDB().then(() => {

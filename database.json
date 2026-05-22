@@ -1,0 +1,35 @@
+{
+  "idosos": [
+    {
+      "id": "default_idoso",
+      "nome": "Residente Demonstrativo",
+      "idade": 78,
+      "quarto": "Quarto 102-A",
+      "email": "idoso@laco.com",
+      "senha": "$2b$10$sDJgdQoKzHkLdsQBmsPoWu5t40w3BHaks0Ig90HJSulENmhOCKpqq"
+    }
+  ],
+  "checkins": [
+    {
+      "id": "1779472736582",
+      "idosoId": "1779467893335",
+      "data": "2026-05-22T17:58:56.582Z",
+      "humorDia": "Bem",
+      "alimentacao": "Autoavaliação",
+      "interacaoSocial": "Autoavaliação",
+      "visitas": "Não avaliado",
+      "observacoes": "estou bem"
+    },
+    {
+      "id": "1779472712783",
+      "idosoId": "1779467893335",
+      "data": "2026-05-22T17:58:32.784Z",
+      "humorDia": "Atenção",
+      "alimentacao": "Autoavaliação",
+      "interacaoSocial": "Autoavaliação",
+      "visitas": "Não avaliado",
+      "observacoes": ""
+    }
+  ],
+  "agenda": []
+}
