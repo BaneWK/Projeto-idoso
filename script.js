@@ -202,14 +202,24 @@
     }
   });
 
-  window.deletarIdoso = async function(id) {
-    if (confirm("Tem certeza que deseja remover permanentemente este idoso do sistema?")) {
+window.deletarIdoso = async function(id) {
+    if (confirm("Tem certeza que deseja remover permanentemente este idoso do sistema? Esta ação não pode ser desfeita.")) {
       try {
-        await apiFetch(`/idosos/${id}`, { method: 'DELETE' });
-        alert("Cadastro removido com sucesso!");
-        sincronizarDadosServidor();
+        // Correção: Garante o método DELETE através da estrutura do apiFetch
+        const resposta = await apiFetch(`/idosos/${id}`, {
+          method: 'DELETE'
+        });
+
+        // Verifica se o servidor retornou sucesso
+        if (resposta && (resposta.sucesso || !resposta.mensagem)) {
+          alert("Idoso removido com sucesso!");
+          sincronizarDadosServidor(); // Atualiza a tela imediatamente
+        } else {
+          alert(`Não foi possível remover: ${resposta.mensagem || 'Erro desconhecido'}`);
+        }
       } catch (err) {
-        alert("Erro ao remover registro.");
+        console.error("Erro na exclusão:", err);
+        alert("Erro ao tentar remover o idoso. Verifique a conexão com o servidor.");
       }
     }
   };
