@@ -64,8 +64,26 @@
       </section>
 
       <section id="idosoSection" class="container py-5 text-center section" style="display:none;">
-        <h2 class="display-6 fw-bold mb-5">Olá! Como você está se sentining agora?</h2>
-        <div id="idosoStatusMsg" class="alert alert-success d-none fs-4">Status enviado com sucesso!</div>
+        <h2 class="display-6 fw-bold mb-5">Olá! Como você está se sentindo agora?</h2>
+        
+        <div id="idosoStatusMsg" class="alert alert-success d-none fs-4 p-4 shadow-sm text-center">
+          <div id="agradecimentoTexto" class="fw-bold mb-3">
+            ❤️ Muito obrigado por avisar! <br>
+            <span class="fs-5 fw-normal text-muted">Já recebemos o seu status.</span>
+          </div>
+          
+          <div id="campoSentimentoOpcional" class="mt-4 p-3 bg-white rounded shadow-sm" style="max-width: 500px; margin: 0 auto;">
+            <label for="idosoRelato" class="form-label fs-5 fw-bold text-dark mb-2">
+              Quer escrever ou contar mais alguma coisa? (Opcional)
+            </label>
+            <textarea id="idosoRelato" class="form-control fs-5" rows="3" placeholder="Ex: Estou com uma leve dor de cabeça, cansaço, ou só quero conversar..."></textarea>
+            <div class="d-flex gap-2 justify-content-center mt-3">
+              <button id="btnEnviarRelato" class="btn btn-primary btn-lg px-4">Enviar Texto</button>
+              <button id="btnFecharRelato" class="btn btn-outline-secondary btn-lg px-4">Agora Não</button>
+            </div>
+          </div>
+        </div>
+
         <div class="row g-4 justify-content-center">
           <div class="col-12">
             <button onclick="enviarStatusIdoso('Bem')" class="btn btn-success btn-idoso shadow border-0">
@@ -97,13 +115,6 @@
         </div>
         <div class="row g-3 mb-4" id="dashboardCards"></div>
         <div class="card mb-4 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title mb-3">Tendência Semanal de Humor Global</h5>
-            <div id="weeklyChart" class="d-flex align-items-end" style="height:140px;"></div>
-            <div class="d-flex justify-content-between text-muted small mt-2" id="chartLegend"></div>
-          </div>
-        </div>
-        <div class="card shadow-sm">
           <div class="card-body">
             <h5 class="card-title mb-3">Painel de Monitoramento Geral</h5>
             <div id="geralIdosos" class="row g-3"></div>
@@ -157,12 +168,6 @@
             <div class="card p-3 shadow-sm mb-3">
               <label for="selectIdoso" class="form-label fw-bold">Selecionar Residente</label>
               <select id="selectIdoso" class="form-select"></select>
-            </div>
-            <div class="card shadow-sm" id="historicoCheckinRow" style="display:none;">
-              <div class="card-body">
-                <h6 class="text-muted mb-3">Histórico de Humor Interno (Últimos 7 dias)</h6>
-                <div id="historicoCheckin" class="d-flex align-items-end gap-2" style="height:120px;"></div>
-              </div>
             </div>
           </div>
           <div class="col-md-6">

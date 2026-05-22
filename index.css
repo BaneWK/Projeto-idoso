@@ -18,7 +18,7 @@ main { margin-left: 260px; }
 .section { display: none; }
 .card { border-radius: 12px; }
 
-/* Estilização Exclusiva do Botão do Idoso (Foco em Acessibilidade Motor-Visual) */
+/* Estilização dos Botões dos Idosos */
 .btn-idoso {
   width: 90%;
   max-width: 500px;
@@ -31,4 +31,28 @@ main { margin-left: 260px; }
 }
 .btn-idoso:active {
   transform: scale(0.95);
+}
+
+.btn-idoso:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Otimizações Responsivas para Dispositivos Móveis Pequenos */
+@media (max-width: 576px) {
+  .btn-idoso {
+    width: 100% !important;
+    padding: 25px 15px !important;
+    font-size: 1.6rem !important;
+    border-radius: 15px !important;
+  }
+  #campoSentimentoOpcional {
+    width: 100% !important;
+    padding: 15px !important;
+  }
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
 }

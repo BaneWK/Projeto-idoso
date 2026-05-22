@@ -8,17 +8,17 @@ app.use(express.json());
 
 const JWT_SECRET = 'CHAVE_ULTRA_SECRETA_LACO';
 
-// Banco de Dados em Memória Compartilhada (Acesso Centralizado)
+// Banco de Dados Mockado em Memória Volátil Central
 let idosos = [
   { id: "1", nome: "Ana Oliveira", idade: 79, quarto: "101A", email: "ana@laco.com", senha: "123" },
   { id: "2", nome: "Carlos Souza", idade: 82, quarto: "202B", email: "carlos@laco.com", senha: "123" }
 ];
 
 let checkins = [
-  { idosoId: "1", data: new Date().toISOString(), humorDia: "Bem", alimentacao: "Completa", interacaoSocial: "Regular" }
+  { idosoId: "1", data: new Date().toISOString(), humorDia: "Bem", alimentacao: "Completa", interacaoSocial: "Regular", observacoes: "" }
 ];
 
-// --- Middleware de Proteção de Token ---
+// --- Middleware de Proteção de Token JWT ---
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -31,19 +31,17 @@ function autenticarToken(req, res, next) {
   });
 }
 
-// --- ROTAS DA API ---
+// --- ROTAS DO SERVIDOR ---
 
-// 1. Endpoint de Login Real
+// Login Unificado
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
 
-  // Login de Administrador Padrão
   if (email === 'admin@laco.com' && password === 'admin123') {
     const token = jwt.sign({ email, role: 'admin' }, JWT_SECRET);
     return res.json({ token, user: { email, role: 'admin' } });
   }
 
-  // Login Dinâmico de Idosos Cadastrados no Sistema
   const idoso = idosos.find(i => i.email === email && i.senha === password);
   if (idoso) {
     const token = jwt.sign({ email: idoso.email, id: idoso.id, role: 'idoso' }, JWT_SECRET);
@@ -53,44 +51,70 @@ app.post('/api/auth/login', (req, res) => {
   res.status(400).json({ mensagem: "E-mail ou senha incorretos!" });
 });
 
-// 2. Buscar Lista de Idosos (Apenas Admin)
+// Listagem de Idosos
 app.get('/api/idosos', autenticarToken, (req, res) => {
   res.json(idosos);
 });
 
-// 3. Cadastrar Idoso (Apenas Admin)
+// Inserção de Novo Cadastro
 app.post('/api/idosos', autenticarToken, (req, res) => {
   const { nome, idade, quarto, email, senha } = req.body;
   const novoIdoso = { id: String(Date.now()), nome, idade, quarto, email, senha };
   idosos.push(novoIdoso);
-  res.status(21).json(novoIdoso);
+  res.status(201).json(novoIdoso);
 });
 
-// 4. Buscar Todos os Check-ins (Apenas Admin)
+// ROTA ATUALIZADA: Remoção Física de Idoso por ID
+app.delete('/api/idosos/:id', autenticarToken, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ mensagem: "Acesso restrito" });
+  const { id } = req.params;
+  const index = idosos.findIndex(i => i.id === id);
+  
+  if (index !== -1) {
+    idosos.splice(index, 1);
+    // Remove check-ins associados para limpar a memória
+    checkins = checkins.filter(c => c.idosoId !== id);
+    return res.json({ sucesso: true });
+  }
+  res.status(404).json({ mensagem: "Não encontrado" });
+});
+
+// Listagem Completa de Logs
 app.get('/api/checkins', autenticarToken, (req, res) => {
   res.json(checkins);
 });
 
-// 5. Registrar Check-in Técnico de Evolução (Admin)
+// Registro Manual/Clínico do Cuidador
 app.post('/api/checkins', autenticarToken, (req, res) => {
   const log = { ...req.body, data: new Date().toISOString() };
   checkins.unshift(log);
   res.json({ sucesso: true });
 });
 
-// 6. Enviar Status pelo próprio Idoso (Aperto de botão grande na tela dele)
+// Botão de Clique Rápido do Idoso
 app.post('/api/checkins/rapido', autenticarToken, (req, res) => {
-  if (req.user.role !== 'idoso') return res.status(403).json({ mensagem: "Acesso restrito" });
-  
+  if (req.user.role !== 'idoso') return res.status(403).json({ message: "Negado" });
   const log = {
     idosoId: req.user.id,
     data: new Date().toISOString(),
     humorDia: req.body.humorDia,
     alimentacao: "Informado pelo próprio",
-    interacaoSocial: "Regular"
+    interacaoSocial: "Regular",
+    observacoes: ""
   };
   checkins.unshift(log);
   res.json({ sucesso: true });
+});
+
+// ROTA ATUALIZADA: Injeção de Relato Opcional por Texto do Idoso
+app.post('/api/checkins/relato', autenticarToken, (req, res) => {
+  if (req.user.role !== 'idoso') return res.status(403).json({ mensagem: "Restrito" });
+  const ultimoCheckin = checkins.find(c => c.idosoId === req.user.id);
+  if (ultimoCheckin) {
+    ultimoCheckin.observacoes = req.body.observacaoIdoso;
+    return res.json({ sucesso: true });
+  }
+  res.status(400).json({ mensagem: "Nenhum log para atualizar." });
 });
 
 app.listen(3000, () => console.log('Servidor Central Laço rodando na porta 3000'));
