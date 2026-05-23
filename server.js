@@ -269,13 +269,13 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
   res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
-// CORREÇÃO EFETUADA: Rota coringa atualizada de '*' para '*(*)' para compatibilidade com versões novas do Express
-app.get('*(*)', (req, res, next) => {
+// ALTERAÇÃO FINAL AQUI: Sintaxe de rota coringa atualizada para funcionar perfeitamente com Express 5.x / path-to-regexp moderno
+app.get('/:split(*)', (req, res, next) => {
   if (req.url.startsWith('/api')) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Adicionado '0.0.0.0' para aceitar conexões vindas da internet externa no Render
+// Inicialização ouvindo em 0.0.0.0
 initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => console.log(`Servidor rodando na porta ${PORT}`));
 });
