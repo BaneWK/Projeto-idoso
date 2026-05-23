@@ -7,20 +7,26 @@ const mongoose = require('mongoose');
 
 const app = express();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_Hash';
+// Configurações e chaves de segurança
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error("ERRO CRÍTICO: A variável JWT_SECRET não foi definida!");
+}
+const SEGREDO_BACKUP = JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_Hash';
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos do front-end na Vercel
+// Servir arquivos estáticos do front-end
 app.use(express.static(path.join(process.cwd(), 'public')));
 
 // ==========================================
 // 1. CONEXÃO COM O BANCO DE DADOS (MONGODB)
 // ==========================================
 if (!MONGODB_URI) {
-  console.error("AVISO CRÍTICO: A variável MONGODB_URI não foi definida nas configurações da Vercel!");
+  console.error("AVISO CRÍTICO: A variável MONGODB_URI não foi definida nas configurações!");
 } else {
   mongoose.connect(MONGODB_URI)
     .then(() => {
@@ -45,7 +51,7 @@ const Idoso = mongoose.model('Idoso', IdosoSchema);
 
 const CheckinSchema = new mongoose.Schema({
   data: { type: String, required: true },
-  idosoId: { type: String, required: true },
+  idosoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Idoso', required: true },
   humorDia: { type: String },
   alimentacao: { type: String },
   interacaoSocial: { type: String },
@@ -55,7 +61,7 @@ const CheckinSchema = new mongoose.Schema({
 const Checkin = mongoose.model('Checkin', CheckinSchema);
 
 const AgendaSchema = new mongoose.Schema({
-  idosoId: { type: String, required: true },
+  idosoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Idoso', required: true },
   titulo: { type: String, required: true },
   descricao: { type: String },
   data: { type: String },
@@ -98,7 +104,7 @@ function autenticarToken(req, res, next) {
     return res.status(401).json({ mensagem: "Token de acesso ausente." });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, SEGREDO_BACKUP, (err, user) => {
     if (err) return res.status(403).json({ mensagem: "Sessão inválida ou expirada." });
     req.user = user;
     next();
@@ -120,14 +126,14 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     // Login do Administrador (Fixo)
     if (email === 'admin@laco.com' && password === '123456') {
-      const token = jwt.sign({ email: 'admin@laco.com', role: 'admin' }, JWT_SECRET, { expiresIn: '8h' });
+      const token = jwt.sign({ email: 'admin@laco.com', role: 'admin' }, SEGREDO_BACKUP, { expiresIn: '8h' });
       return res.json({ token, user: { email: 'admin@laco.com', role: 'admin' } });
     }
 
     // Login do Idoso buscando no MongoDB
     const idoso = await Idoso.findOne({ email });
     if (!idoso) {
-      return res.status(400).json({ mensagem: "Credenciais incorretas ou usuário instruído inexistente." });
+      return res.status(400).json({ mensagem: "Credenciais incorretas ou usuário inexistente." });
     }
 
     const senhaValida = await bcrypt.compare(password, idoso.senha);
@@ -135,7 +141,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ mensagem: "Credenciais incorretas." });
     }
 
-    const token = jwt.sign({ id: idoso._id, email: idoso.email, role: 'idoso' }, JWT_SECRET, { expiresIn: '12h' });
+    const token = jwt.sign({ id: idoso._id, email: idoso.email, role: 'idoso' }, SEGREDO_BACKUP, { expiresIn: '12h' });
     return res.json({ token, user: { id: idoso._id, email: idoso.email, role: 'idoso', nome: idoso.nome } });
   } catch (error) {
     res.status(500).json({ mensagem: "Erro interno no servidor ao tentar logar." });
@@ -218,12 +224,12 @@ app.get('/api/checkins', autenticarToken, async (req, res) => {
   }
 });
 
-// Criar Check-in Completo
+// Criar Check-in Completo (Feito pelo Admin/Enfermeiro)
 app.post('/api/checkins', autenticarToken, async (req, res) => {
   const { idosoId, humorDia, alimentacao, interacaoSocial, visitas, observacoes } = req.body;
   
-  if (!idosoId) {
-    return res.status(400).json({ mensagem: "Identificação do idoso obrigatória." });
+  if (!idosoId || !mongoose.Types.ObjectId.isValid(idosoId)) {
+    return res.status(400).json({ mensagem: "Identificação válida do idoso é obrigatória." });
   }
 
   try {
@@ -244,11 +250,13 @@ app.post('/api/checkins', autenticarToken, async (req, res) => {
 
 // Criar Check-in Rápido (Autoavaliação do Idoso)
 app.post('/api/checkins/rapido', autenticarToken, async (req, res) => {
-  const idosoIdEfetivo = req.user.id || 'default_idoso';
+  if (req.user.role !== 'idoso' || !req.user.id) {
+    return res.status(403).json({ mensagem: "Apenas residentes logados podem fazer check-in rápido." });
+  }
   
   try {
     const novoCheckinRapido = await Checkin.create({
-      idosoId: idosoIdEfetivo,
+      idosoId: req.user.id,
       data: new Date().toISOString(),
       humorDia: req.body.humorDia,
       alimentacao: "Autoavaliação",
@@ -264,8 +272,12 @@ app.post('/api/checkins/rapido', autenticarToken, async (req, res) => {
 
 // Adicionar Relato/Observação ao Último Check-in
 app.post('/api/checkins/relato', autenticarToken, async (req, res) => {
+  if (req.user.role !== 'idoso' || !req.user.id) {
+    return res.status(403).json({ mensagem: "Apenas residentes logados podem adicionar relatos." });
+  }
+
   try {
-    const idosoIdEfetivo = req.user.id || 'default_idoso';
+    const idosoIdEfetivo = req.user.id;
     const { observacaoIdoso } = req.body;
 
     const ultimoCheckin = await Checkin.findOne({ idosoId: idosoIdEfetivo }).sort({ data: -1 });
@@ -303,6 +315,11 @@ app.get('/api/agenda', autenticarToken, async (req, res) => {
 
 // Adicionar à Agenda
 app.post('/api/agenda', autenticarToken, async (req, res) => {
+  const { idosoId } = req.body;
+  if (!idosoId || !mongoose.Types.ObjectId.isValid(idosoId)) {
+    return res.status(400).json({ mensagem: "ID do residente inválido ou ausente." });
+  }
+
   try {
     const novaTarefa = await Agenda.create({
       ...req.body,
@@ -348,5 +365,13 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
+
+// Inicialização local para testes (Evita que o código fique inativo fora da Vercel)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando localmente na porta ${PORT}`);
+  });
+}
 
 module.exports = app;
