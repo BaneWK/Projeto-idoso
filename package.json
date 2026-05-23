@@ -4,6 +4,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "fs-extra": "^11.3.5",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.2"
   }
 }
