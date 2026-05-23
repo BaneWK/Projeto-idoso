@@ -1,5 +1,6 @@
 (function(){
-  const API_BASE = 'http://localhost:3000/api';
+  // CORRIGIDO: Agora usa caminho relativo, permitindo o funcionamento na Vercel e em qualquer celular
+  const API_BASE = '/api';
 
   let idosos = [];
   let checkins = [];
