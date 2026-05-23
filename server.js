@@ -6,12 +6,21 @@ const fs = require('fs-extra');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
-const JWT_SECRET = 'LacoVital_Secret_Key_2026_Secure_Hash';
-const DB_FILE = path.join(__dirname, 'database.json');
+
+// O Render define a porta automaticamente através de variáveis de ambiente
+const PORT = process.env.PORT || 3000; 
+
+const JWT_SECRET = process.env.JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_Hash';
+
+// Ajustado para garantir compatibilidade com os Discos Persistentes do Render
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 app.use(cors());
 app.use(express.json());
+
+// Diz ao Express para servir seus arquivos visuais (HTML, CSS, JS) da pasta public
+app.use(express.static(path.join(__dirname, 'public')));
 
 let db = { idosos: [], checkins: [], agenda: [] };
 
@@ -260,6 +269,13 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
   res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
+// Rota "coringa" para garantir que qualquer link digitado abra o app visual
+app.get('*', (req, res, next) => {
+  if (req.url.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// MODIFICAÇÃO AQUI: Adicionado '0.0.0.0' para aceitar conexões vindas da internet externa no Render
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => console.log(`Servidor rodando na porta ${PORT}`));
 });

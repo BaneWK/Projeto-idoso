@@ -1,14 +1,5 @@
 {
-  "idosos": [
-    {
-      "id": "default_idoso",
-      "nome": "Residente Demonstrativo",
-      "idade": 78,
-      "quarto": "Quarto 102-A",
-      "email": "idoso@laco.com",
-      "senha": "$2b$10$sDJgdQoKzHkLdsQBmsPoWu5t40w3BHaks0Ig90HJSulENmhOCKpqq"
-    }
-  ],
+  "idosos": [],
   "checkins": [
     {
       "id": "1779472736582",
