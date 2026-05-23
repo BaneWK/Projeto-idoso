@@ -2,55 +2,39 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const fs = require('fs-extra');
 const path = require('path');
 
 const app = express();
 
-// O Render define a porta automaticamente através de variáveis de ambiente
-const PORT = process.env.PORT || 3000; 
-
 const JWT_SECRET = process.env.JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_Hash';
-
-// Ajustado para garantir compatibilidade com os Discos Persistentes do Render
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 app.use(cors());
 app.use(express.json());
 
-// Diz ao Express para servir seus arquivos visuais (HTML, CSS, JS) da pasta public
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve os arquivos estáticos da pasta public se estiverem no mesmo projeto
+app.use(express.static(path.join(__dirname, '../public')));
 
+// Como o Vercel é Serverless, iniciamos os dados em memória.
+// ATENÇÃO: Os dados serão resetados quando a função serverless "esfriar".
 let db = { idosos: [], checkins: [], agenda: [] };
 
-async function initDB() {
-  try {
-    if (await fs.pathExists(DB_FILE)) {
-      db = await fs.readJson(DB_FILE);
-    } else {
-      const salt = await bcrypt.genSalt(10);
-      const senhaAdminHash = await bcrypt.hash('123456', salt);
-      const senhaIdosoHash = await bcrypt.hash('123456', salt);
+// Inicialização síncrona/imediata da estrutura básica na memória
+function initDBInMemory() {
+  if (db.idosos.length === 0) {
+    const salt = bcrypt.genSaltSync(10);
+    const senhaIdosoHash = bcrypt.hashSync('123456', salt);
 
-      db.idosos.push({
-        id: 'default_idoso',
-        nome: 'Residente Demonstrativo',
-        idade: 78,
-        quarto: 'Quarto 102-A',
-        email: 'idoso@laco.com',
-        senha: senhaIdosoHash
-      });
-      await saveDB();
-    }
-  } catch (err) {
-    console.error('Falha crítica ao inicializar persistência local:', err);
+    db.idosos.push({
+      id: 'default_idoso',
+      nome: 'Residente Demonstrativo',
+      idade: 78,
+      quarto: 'Quarto 102-A',
+      email: 'idoso@laco.com',
+      senha: senhaIdosoHash
+    });
   }
 }
-
-async function saveDB() {
-  await fs.writeJson(DB_FILE, db, { spaces: 2 });
-}
+initDBInMemory();
 
 function autenticarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -129,7 +113,6 @@ app.post('/api/idosos', autenticarToken, async (req, res) => {
     };
 
     db.idosos.push(novoIdoso);
-    await saveDB();
     
     const { senha: _, ...idosoExposto } = novoIdoso;
     res.status(201).json(idosoExposto);
@@ -150,7 +133,6 @@ app.delete('/api/idosos/:id', autenticarToken, async (req, res) => {
     db.idosos.splice(index, 1);
     db.agenda = db.agenda.filter(a => String(a.idosoId) !== String(id));
     db.checkins = db.checkins.filter(c => String(c.idosoId) !== String(id));
-    await saveDB();
     return res.json({ sucesso: true, message: "Registro removido com sucesso." });
   }
   res.status(404).json({ mensagem: "Residente não encontrado." });
@@ -179,7 +161,6 @@ app.post('/api/checkins', autenticarToken, async (req, res) => {
   };
   
   db.checkins.unshift(novoCheckin);
-  await saveDB();
   res.status(201).json(novoCheckin);
 });
 
@@ -198,7 +179,6 @@ app.post('/api/checkins/rapido', autenticarToken, async (req, res) => {
   };
 
   db.checkins.unshift(novoCheckinRapido);
-  await saveDB();
   res.status(201).json(novoCheckinRapido);
 });
 
@@ -224,7 +204,6 @@ app.post('/api/checkins/relato', autenticarToken, async (req, res) => {
       });
     }
     
-    await saveDB();
     return res.json({ sucesso: true, mensagem: "Relato salvo com sucesso." });
   } catch (error) {
     return res.status(500).json({ mensagem: "Erro ao salvar relato." });
@@ -242,7 +221,6 @@ app.post('/api/agenda', autenticarToken, async (req, res) => {
     concluido: false
   };
   db.agenda.push(novaTarefa);
-  await saveDB();
   res.status(201).json(novaTarefa);
 });
 
@@ -251,7 +229,6 @@ app.patch('/api/agenda/:id/status', autenticarToken, async (req, res) => {
   const tarefa = db.agenda.find(t => String(t.id) === String(id));
   if (tarefa) {
     tarefa.concluido = !tarefa.concluido;
-    await saveDB();
     return res.json(tarefa);
   }
   res.status(404).json({ mensagem: "Tarefa não localizada." });
@@ -263,19 +240,16 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
 
   if (index !== -1) {
     db.agenda.splice(index, 1);
-    await saveDB();
     return res.json({ sucesso: true, mensagem: "Agendamento removido com sucesso." });
   }
   res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
-// ALTERAÇÃO FINAL AQUI: Sintaxe de rota coringa atualizada para funcionar perfeitamente com Express 5.x / path-to-regexp moderno
+// Tratamento de rotas do front-end
 app.get('/:split(*)', (req, res, next) => {
   if (req.url.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
-// Inicialização ouvindo em 0.0.0.0
-initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => console.log(`Servidor rodando na porta ${PORT}`));
-});
+// ALTERAÇÃO CRUCIAL PARA O VERCEL: Exportar o app em vez de dar app.listen()
+module.exports = app;
