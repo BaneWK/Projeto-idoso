@@ -269,13 +269,13 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
   res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
-// Rota "coringa" para garantir que qualquer link digitado abra o app visual
-app.get('*', (req, res, next) => {
+// CORREÇÃO EFETUADA: Rota coringa atualizada de '*' para '*(*)' para compatibilidade com versões novas do Express
+app.get('*(*)', (req, res, next) => {
   if (req.url.startsWith('/api')) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// MODIFICAÇÃO AQUI: Adicionado '0.0.0.0' para aceitar conexões vindas da internet externa no Render
+// Adicionado '0.0.0.0' para aceitar conexões vindas da internet externa no Render
 initDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => console.log(`Servidor rodando na porta ${PORT}`));
 });
