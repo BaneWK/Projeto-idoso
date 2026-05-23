@@ -11,14 +11,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_H
 app.use(cors());
 app.use(express.json());
 
-// Serve os arquivos estáticos da pasta public se estiverem no mesmo projeto
-app.use(express.static(path.join(__dirname, '../public')));
+// Alterado para process.cwd() para funcionar corretamente no ambiente Serverless da Vercel
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-// Como o Vercel é Serverless, iniciamos os dados em memória.
-// ATENÇÃO: Os dados serão resetados quando a função serverless "esfriar".
+// Dados em memória (Atenção: resetam quando a função serverless "esfria")
 let db = { idosos: [], checkins: [], agenda: [] };
 
-// Inicialização síncrona/imediata da estrutura básica na memória
 function initDBInMemory() {
   if (db.idosos.length === 0) {
     const salt = bcrypt.genSaltSync(10);
@@ -71,7 +69,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const senhaValida = await bcrypt.compare(password, idoso.senha);
     if (!senhaValida) {
-      return res.status(400).json({ mensagem: "Credenciais incorretas." });
+      return res.status(400).json({ Central: "Credenciais incorretas." });
     }
 
     const token = jwt.sign({ id: idoso.id, email: idoso.email, role: 'idoso' }, JWT_SECRET, { expiresIn: '12h' });
@@ -81,8 +79,10 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Segurança: Remove as senhas criptografadas do retorno para evitar vazamento de dados
 app.get('/api/idosos', autenticarToken, (req, res) => {
-  res.json(db.idosos);
+  const idososProtegidos = db.idosos.map(({ senha, ...resto }) => resto);
+  res.json(idososProtegidos);
 });
 
 app.post('/api/idosos', autenticarToken, async (req, res) => {
@@ -157,7 +157,7 @@ app.post('/api/checkins', autenticarToken, async (req, res) => {
     alimentacao,
     interacaoSocial,
     visitas,
-    observacoes
+    observacoes: observacoes || ""
   };
   
   db.checkins.unshift(novoCheckin);
@@ -187,6 +187,7 @@ app.post('/api/checkins/relato', autenticarToken, async (req, res) => {
     const idosoIdEfetivo = req.user.id || 'default_idoso';
     const { observacaoIdoso } = req.body;
 
+    // Localiza o checkin rápido recém criado para injetar o texto na propriedade correta
     const ultimoCheckin = db.checkins.find(c => String(c.idosoId) === String(idosoIdEfetivo));
     
     if (ultimoCheckin) {
@@ -245,11 +246,10 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
   res.status(404).json({ mensagem: "Compromisso não localizado." });
 });
 
-// Tratamento de rotas do front-end
+// Roteamento SPA corrigido com process.cwd() para a infraestrutura da Vercel
 app.get('/:split(*)', (req, res, next) => {
   if (req.url.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, '../public', 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
-// ALTERAÇÃO CRUCIAL PARA O VERCEL: Exportar o app em vez de dar app.listen()
 module.exports = app;
