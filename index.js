@@ -3,12 +3,12 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-const mongoose = require('mongoose'); // Importação do Mongoose para o MongoDB
+const mongoose = require('mongoose');
 
 const app = express();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'LacoVital_Secret_Key_2026_Secure_Hash';
-const MONGODB_URI = process.env.MONGODB_URI; // Sua variável de ambiente da Vercel
+const MONGODB_URI = process.env.MONGODB_URI;
 
 app.use(cors());
 app.use(express.json());
@@ -19,12 +19,16 @@ app.use(express.static(path.join(process.cwd(), 'public')));
 // ==========================================
 // 1. CONEXÃO COM O BANCO DE DADOS (MONGODB)
 // ==========================================
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log("Conectado ao MongoDB com sucesso!");
-    initDBInDatabase(); // Inicializa os dados demonstrativos no banco real
-  })
-  .catch(err => console.error("Erro crítico ao conectar ao MongoDB:", err));
+if (!MONGODB_URI) {
+  console.error("AVISO CRÍTICO: A variável MONGODB_URI não foi definida nas configurações da Vercel!");
+} else {
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      console.log("Conectado ao MongoDB com sucesso!");
+      initDBInDatabase(); // Inicializa os dados demonstrativos no banco real
+    })
+    .catch(err => console.error("Erro crítico ao conectar ao MongoDB:", err));
+}
 
 // ==========================================
 // 2. DEFINIÇÃO DOS MODELOS (SCHEMAS)
@@ -122,13 +126,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Login do Idoso buscando no MongoDB
     const idoso = await Idoso.findOne({ email });
-    if (!oso) {
+    if (!idoso) {
       return res.status(400).json({ mensagem: "Credenciais incorretas ou usuário instruído inexistente." });
     }
 
     const senhaValida = await bcrypt.compare(password, idoso.senha);
     if (!senhaValida) {
-      return res.status(400).json({ mensagem: "Credenciais incorretas." }); // Corrigido a chave de retorno para 'mensagem'
+      return res.status(400).json({ mensagem: "Credenciais incorretas." });
     }
 
     const token = jwt.sign({ id: idoso._id, email: idoso.email, role: 'idoso' }, JWT_SECRET, { expiresIn: '12h' });
@@ -141,7 +145,7 @@ app.post('/api/auth/login', async (req, res) => {
 // Listar Idosos
 app.get('/api/idosos', autenticarToken, async (req, res) => {
   try {
-    const idosos = await Idoso.find().select('-senha'); // Retorna todos exceto o campo senha
+    const idosos = await Idoso.find().select('-senha');
     res.json(idosos);
   } catch (error) {
     res.status(500).json({ mensagem: "Erro ao buscar residentes." });
@@ -194,7 +198,6 @@ app.delete('/api/idosos/:id', autenticarToken, async (req, res) => {
     const idosoDeletado = await Idoso.findByIdAndDelete(id);
 
     if (idosoDeletado) {
-      // Limpa os registros vinculados a esse idoso automaticamente
       await Agenda.deleteMany({ idosoId: id });
       await Checkin.deleteMany({ idosoId: id });
       return res.json({ sucesso: true, message: "Registro e históricos removidos com sucesso." });
@@ -208,7 +211,7 @@ app.delete('/api/idosos/:id', autenticarToken, async (req, res) => {
 // Listar Check-ins
 app.get('/api/checkins', autenticarToken, async (req, res) => {
   try {
-    const checkins = await Checkin.find().sort({ data: -1 }); // Traz os mais recentes primeiro
+    const checkins = await Checkin.find().sort({ data: -1 });
     res.json(checkins);
   } catch (error) {
     res.status(500).json({ mensagem: "Erro ao carregar check-ins." });
@@ -265,7 +268,6 @@ app.post('/api/checkins/relato', autenticarToken, async (req, res) => {
     const idosoIdEfetivo = req.user.id || 'default_idoso';
     const { observacaoIdoso } = req.body;
 
-    // Busca o último check-in feito por esse idoso específico
     const ultimoCheckin = await Checkin.findOne({ idosoId: idosoIdEfetivo }).sort({ data: -1 });
     
     if (ultimoCheckin) {
@@ -342,9 +344,8 @@ app.delete('/api/agenda/:id', autenticarToken, async (req, res) => {
   }
 });
 
-// Roteamento SPA para a Vercel (Captura rotas do front-end)
-app.get('/:split(*)', (req, res, next) => {
-  if (req.url.startsWith('/api')) return next();
+// Roteamento SPA para a Vercel (Captura rotas residuais do front-end)
+app.get('*', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
